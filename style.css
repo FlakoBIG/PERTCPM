@@ -39,6 +39,7 @@ header {
   display: flex;
   align-items: center;
   gap: 20px;
+  width: 100%;
 }
 
 .logo {
@@ -62,6 +63,42 @@ header {
   font-size: .82rem;
   border-left: 1px solid var(--border);
   padding-left: 20px;
+  flex: 1;
+}
+
+/* ─── Brand SkinnyProject ───────────────────────────────────── */
+.header-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin-left: auto;
+  padding-left: 20px;
+  border-left: 1px solid var(--border);
+}
+
+.brand-by {
+  font-size: .65rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.brand-name {
+  font-size: .95rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--text);
+  line-height: 1;
+}
+
+.brand-accent {
+  color: var(--accent);
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* ─── Layout ────────────────────────────────────────────────── */

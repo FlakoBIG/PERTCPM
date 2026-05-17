@@ -139,14 +139,14 @@ function shake(el) {
 // ─── Add / Edit / Delete ─────────────────────────────────────────
 btnAdd.addEventListener('click', () => {
   editingId = null;
-  openModal('Nueva Actividad');
+  openModal('Nueva actividad');
 });
 
 function editActivity(id) {
   const act = activities.find(a => a.id === id);
   if (!act) return;
   editingId = id;
-  openModal('Editar Actividad', act.name, act.duration, act.predecessors.join(', '));
+  openModal('Editar actividad', act.name, act.duration, act.predecessors.join(', '));
 }
 
 function deleteActivity(id) {
@@ -163,7 +163,7 @@ function deleteActivity(id) {
 function renderTable() {
   activityBody.innerHTML = '';
   if (activities.length === 0) {
-    activityBody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">Sin actividades</td></tr>`;
+    activityBody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">Sin actividades registradas</td></tr>`;
     return;
   }
   activities.forEach(act => {
@@ -173,8 +173,8 @@ function renderTable() {
       <td class="cell-duration">${act.duration}</td>
       <td class="cell-pred">${act.predecessors.join(', ') || '—'}</td>
       <td style="display:flex;gap:4px;justify-content:flex-end">
-        <button class="btn-row-edit"  data-id="${act.id}" title="Editar">✎</button>
-        <button class="btn-row-delete" data-id="${act.id}" title="Eliminar">✕</button>
+        <button class="btn-row-edit"  data-id="${act.id}" title="Editar actividad">✎</button>
+        <button class="btn-row-delete" data-id="${act.id}" title="Eliminar actividad">✕</button>
       </td>`;
     activityBody.appendChild(tr);
   });
@@ -255,7 +255,7 @@ btnGenerate.addEventListener('click', () => {
 
   const cpm = computeCPM(activities);
   if (!cpm) {
-    alert('Se detectó un ciclo en las dependencias. Revisa los predecesores.');
+    alert('Se detectó un ciclo en las dependencias. Por favor revisa los predecesores de cada actividad.');
     return;
   }
 
@@ -283,9 +283,9 @@ function renderCPMTable({ map, projectEnd }) {
   cpmTableWrap.innerHTML = `
     <table>
       <thead><tr>
-        <th>Act</th><th>Dur</th>
-        <th>ES</th><th>EF</th>
-        <th>LS</th><th>LF</th>
+        <th>Act.</th><th>Dur.</th>
+        <th>IC</th><th>TC</th>
+        <th>IT</th><th>TT</th>
         <th>Holgura</th>
       </tr></thead>
       <tbody>${rows}</tbody>
@@ -454,10 +454,10 @@ function drawNode(group, node, edgeGroup, map) {
   g.appendChild(lblDur);
 
   // ES / EF / LS / LF in bottom half
-  const lblES = makeSVGText(`ES:${node.ES}`,  NODE_W * 1/4, NODE_H * 3/4 - 8, 'node-es');
-  const lblEF = makeSVGText(`EF:${node.EF}`,  NODE_W * 3/4, NODE_H * 3/4 - 8, 'node-ef');
-  const lblLS = makeSVGText(`LS:${node.LS}`,  NODE_W * 1/4, NODE_H * 3/4 + 8, 'node-ls');
-  const lblLF = makeSVGText(`LF:${node.LF}`,  NODE_W * 3/4, NODE_H * 3/4 + 8, 'node-lf');
+  const lblES = makeSVGText(`IC:${node.ES}`,  NODE_W * 1/4, NODE_H * 3/4 - 8, 'node-es');
+  const lblEF = makeSVGText(`TC:${node.EF}`,  NODE_W * 3/4, NODE_H * 3/4 - 8, 'node-ef');
+  const lblLS = makeSVGText(`IT:${node.LS}`,  NODE_W * 1/4, NODE_H * 3/4 + 8, 'node-ls');
+  const lblLF = makeSVGText(`TT:${node.LF}`,  NODE_W * 3/4, NODE_H * 3/4 + 8, 'node-lf');
   [lblES, lblEF, lblLS, lblLF].forEach(l => g.appendChild(l));
 
   g.setAttribute('transform', `translate(${pos.x},${pos.y})`);
