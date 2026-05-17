@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PERT / CPM Diagram Tool</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text">PERT <span class="accent">/ CPM</span></span>
+      </div>
+      <p class="tagline">Planificación y análisis de ruta crítica</p>
+    </div>
+  </header>
+
+  <main>
+    <!-- Panel izquierdo: tabla de actividades -->
+    <aside class="panel">
+      <div class="panel-header">
+        <h2>Actividades</h2>
+        <button id="btn-add" class="btn btn-primary">+ Agregar</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table id="activity-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Duración</th>
+              <th>Predecesores</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="activity-body">
+            <!-- filas dinámicas -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel-actions">
+        <button id="btn-generate" class="btn btn-success">Generar Diagrama</button>
+        <button id="btn-clear" class="btn btn-ghost">Limpiar todo</button>
+      </div>
+
+      <!-- Resultados CPM -->
+      <div id="cpm-results" class="cpm-results hidden">
+        <h3>Análisis CPM</h3>
+        <div id="cpm-table-wrapper"></div>
+        <div class="critical-path-label">
+          <span class="dot critical"></span>
+          Ruta crítica — Duración total: <strong id="total-duration">0</strong>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Panel derecho: canvas del diagrama -->
+    <section class="canvas-section">
+      <div class="canvas-toolbar">
+        <span class="toolbar-hint">Arrastra los nodos para reorganizar el diagrama</span>
+        <div class="toolbar-right">
+          <button id="btn-zoom-in"  class="btn btn-icon" title="Zoom in">+</button>
+          <button id="btn-zoom-out" class="btn btn-icon" title="Zoom out">−</button>
+          <button id="btn-zoom-reset" class="btn btn-icon" title="Reset zoom">⊙</button>
+        </div>
+      </div>
+      <div class="canvas-container" id="canvas-container">
+        <svg id="diagram-svg" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="7"
+                    refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" class="arrow-head" />
+            </marker>
+            <marker id="arrow-critical" markerWidth="10" markerHeight="7"
+                    refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" class="arrow-head-critical" />
+            </marker>
+          </defs>
+          <g id="diagram-group"></g>
+        </svg>
+        <div id="empty-state" class="empty-state">
+          <div class="empty-icon">⬡</div>
+          <p>Agrega actividades y presiona<br /><strong>Generar Diagrama</strong></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal para editar actividad -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Nueva Actividad</h3>
+        <button id="modal-close" class="btn-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <label>
+          Nombre de la actividad
+          <input type="text" id="input-name" placeholder="Ej: A, Diseño, Análisis…" maxlength="20" />
+        </label>
+        <label>
+          Duración <span class="hint">(días / semanas / unidades)</span>
+          <input type="number" id="input-duration" placeholder="Ej: 5" min="0" step="0.5" />
+        </label>
+        <label>
+          Predecesores <span class="hint">(separados por coma)</span>
+          <input type="text" id="input-predecessors" placeholder="Ej: A, B" />
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-cancel" class="btn btn-ghost">Cancelar</button>
+        <button id="modal-save"   class="btn btn-primary">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
