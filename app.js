@@ -11,7 +11,7 @@
 let activities    = [];   // { num, name, duration, predecessors[] }
 let editingNum    = null; // número de la tarea que se está editando
 let nodePositions = {};   // num → { x, y }
-let nextNum       = 1;    // contador autoincremental
+// nextNum se calcula dinámicamente con getNextNum()
 
 // ─── DOM refs ───────────────────────────────────────────────────
 const activityBody    = document.getElementById('activity-body');
@@ -81,7 +81,13 @@ window.addEventListener('mouseup', () => {
   canvasContainer.style.cursor = '';
 });
 
-// ─── Modal ───────────────────────────────────────────────────────
+// Devuelve el menor número positivo que no esté en uso
+function getNextNum() {
+  const used = new Set(activities.map(a => a.num));
+  let n = 1;
+  while (used.has(n)) n++;
+  return n;
+}
 function openModal(title, num, name = '', duration = '', pred = '') {
   modalTitle.textContent    = title;
   modalNumBadge.textContent = `#${num}`;
@@ -132,7 +138,7 @@ modalSave.addEventListener('click', () => {
     const act = activities.find(a => a.num === editingNum);
     if (act) { act.name = name; act.duration = duration; act.predecessors = predecessors; }
   } else {
-    activities.push({ num: nextNum++, name, duration, predecessors });
+    activities.push({ num: getNextNum(), name, duration, predecessors });
   }
 
   renderTable();
@@ -153,7 +159,7 @@ function shake(el) {
 // ─── Agregar / Editar / Eliminar ─────────────────────────────────
 btnAdd.addEventListener('click', () => {
   editingNum = null;
-  openModal('Nueva actividad', nextNum);
+  openModal('Nueva actividad', getNextNum());
 });
 
 function editActivity(num) {
