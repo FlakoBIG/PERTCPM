@@ -817,6 +817,17 @@ tbody td {
 
 .pred-option-row.selected .pred-opt-check { opacity: 1; }
 
+.pred-empty-msg {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: .78rem;
+  padding: 14px 8px;
+  font-style: italic;
+}
+
+/* ─── Utilities ─────────────────────────────────────────────── */
+.hidden { display: none !important; }
+
 /* ─── Responsive ────────────────────────────────────────────── */
 @media (max-width: 768px) {
   main { flex-direction: column; }

@@ -1,17 +1,14 @@
 /* ═══════════════════════════════════════════════════════════════
    PERT / CPM  —  app.js
-   Cada actividad tiene:
-     · num          → número correlativo (1, 2, 3…) — clave única
-     · name         → nombre descriptivo libre
-     · duration     → duración numérica
-     · predecessors → array de números (int) de tareas predecesoras
    ═══════════════════════════════════════════════════════════════ */
 
+document.addEventListener('DOMContentLoaded', () => {
+
 // ─── Estado ─────────────────────────────────────────────────────
-let activities    = [];   // { num, name, duration, predecessors[] }
-let editingNum    = null; // número de la tarea que se está editando
-let nodePositions = {};   // num → { x, y }
-// nextNum se calcula dinámicamente con getNextNum()
+let activities    = [];
+let editingNum    = null;
+let nodePositions = {};
+let selectedPreds = [];
 
 // ─── DOM refs ───────────────────────────────────────────────────
 const activityBody    = document.getElementById('activity-body');
@@ -22,7 +19,7 @@ const cpmResults      = document.getElementById('cpm-results');
 const cpmTableWrap    = document.getElementById('cpm-table-wrapper');
 const totalDuration   = document.getElementById('total-duration');
 const emptyState      = document.getElementById('empty-state');
-const svg             = document.getElementById('diagram-svg');
+const svgEl           = document.getElementById('diagram-svg');
 const diagramGroup    = document.getElementById('diagram-group');
 const canvasContainer = document.getElementById('canvas-container');
 
@@ -35,6 +32,8 @@ const modalCancel   = document.getElementById('modal-cancel');
 const modalSave     = document.getElementById('modal-save');
 const inputName     = document.getElementById('input-name');
 const inputDuration = document.getElementById('input-duration');
+const predSelected  = document.getElementById('pred-selected');
+const predOptions   = document.getElementById('pred-options');
 
 // Zoom / pan
 const btnZoomIn    = document.getElementById('btn-zoom-in');
@@ -63,7 +62,7 @@ canvasContainer.addEventListener('wheel', e => {
 }, { passive: false });
 
 canvasContainer.addEventListener('mousedown', e => {
-  if (e.target === svg || e.target === diagramGroup) {
+  if (e.target === svgEl || e.target === diagramGroup) {
     isPanning = true;
     panStart  = { x: e.clientX - panX, y: e.clientY - panY };
     canvasContainer.style.cursor = 'grabbing';
@@ -80,22 +79,17 @@ window.addEventListener('mouseup', () => {
   canvasContainer.style.cursor = '';
 });
 
-// Devuelve el menor número positivo que no esté en uso
+// ─── Número siguiente disponible ────────────────────────────────
 function getNextNum() {
   const used = new Set(activities.map(a => a.num));
   let n = 1;
   while (used.has(n)) n++;
   return n;
 }
-// ─── Estado del selector de predecesores ────────────────────────
-let selectedPreds = []; // array de nums seleccionados en el modal
 
-const predSelected = document.getElementById('pred-selected');
-const predOptions  = document.getElementById('pred-options');
-
-// Renderiza los chips seleccionados y la lista de opciones
+// ─── Selector de predecesores ────────────────────────────────────
 function renderPredSelector(excludeNum = null) {
-  // ── Chips seleccionados ──
+  // Chips seleccionados
   predSelected.innerHTML = '';
   selectedPreds.forEach(num => {
     const act = activities.find(a => a.num === num);
@@ -117,15 +111,19 @@ function renderPredSelector(excludeNum = null) {
     });
   });
 
-  // ── Lista de opciones disponibles ──
+  // Lista de opciones
   predOptions.innerHTML = '';
   const available = activities.filter(a => a.num !== excludeNum);
+
+  if (available.length === 0) {
+    predOptions.innerHTML = `<div class="pred-empty-msg">No hay otras tareas disponibles</div>`;
+    return;
+  }
 
   available.forEach(act => {
     const isSelected = selectedPreds.includes(act.num);
     const row = document.createElement('div');
     row.className = `pred-option-row${isSelected ? ' selected' : ''}`;
-    row.dataset.num = act.num;
     row.innerHTML = `
       <span class="pred-opt-num">${act.num}</span>
       <span class="pred-opt-name">${act.name}</span>
@@ -144,6 +142,7 @@ function renderPredSelector(excludeNum = null) {
   });
 }
 
+// ─── Modal ───────────────────────────────────────────────────────
 function openModal(title, num, name = '', duration = '', predNums = []) {
   modalTitle.textContent    = title;
   modalNumBadge.textContent = `#${num}`;
@@ -157,7 +156,8 @@ function openModal(title, num, name = '', duration = '', predNums = []) {
 
 function closeModal() {
   modalOverlay.classList.add('hidden');
-  editingNum = null;
+  editingNum    = null;
+  selectedPreds = [];
 }
 
 modalClose.addEventListener('click',  closeModal);
@@ -211,7 +211,6 @@ function editActivity(num) {
 
 function deleteActivity(num) {
   activities = activities.filter(a => a.num !== num);
-  // Limpiar referencias a la tarea eliminada en otros predecesores
   activities.forEach(a => {
     a.predecessors = a.predecessors.filter(p => p !== num);
   });
@@ -259,7 +258,6 @@ function renderTable() {
 btnClear.addEventListener('click', () => {
   activities    = [];
   nodePositions = {};
-  nextNum       = 1;
   renderTable();
   diagramGroup.innerHTML = '';
   emptyState.classList.remove('hidden');
@@ -269,7 +267,6 @@ btnClear.addEventListener('click', () => {
 });
 
 // ─── Cálculo CPM ─────────────────────────────────────────────────
-// Internamente usamos el número (num) como clave del mapa
 function computeCPM(acts) {
   const map = {};
   acts.forEach(a => {
@@ -277,9 +274,8 @@ function computeCPM(acts) {
   });
 
   const sorted = topoSort(acts);
-  if (!sorted) return null; // ciclo detectado
+  if (!sorted) return null;
 
-  // Pasada hacia adelante
   sorted.forEach(num => {
     const node = map[num];
     node.ES = node.predecessors.length === 0
@@ -290,7 +286,6 @@ function computeCPM(acts) {
 
   const projectEnd = Math.max(...Object.values(map).map(n => n.EF));
 
-  // Pasada hacia atrás
   [...sorted].reverse().forEach(num => {
     const node       = map[num];
     const successors = acts.filter(a => a.predecessors.includes(num));
@@ -342,7 +337,7 @@ function renderCPMTable({ map, projectEnd }) {
   totalDuration.textContent = projectEnd;
 
   const rows = Object.values(map).map(n => {
-    const isCrit = n.slack === 0;
+    const isCrit   = n.slack === 0;
     const predText = n.predecessors.length ? n.predecessors.join(', ') : '—';
     return `<tr class="${isCrit ? 'critical-row' : ''}">
       <td><span class="badge-num sm">${n.num}</span></td>
@@ -360,13 +355,8 @@ function renderCPMTable({ map, projectEnd }) {
   cpmTableWrap.innerHTML = `
     <table>
       <thead><tr>
-        <th>#</th>
-        <th>Nombre</th>
-        <th>Dur.</th>
-        <th>Pred.</th>
-        <th>IC</th><th>TC</th>
-        <th>IT</th><th>TT</th>
-        <th>Holgura</th>
+        <th>#</th><th>Nombre</th><th>Dur.</th><th>Pred.</th>
+        <th>IC</th><th>TC</th><th>IT</th><th>TT</th><th>Holgura</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
@@ -400,8 +390,7 @@ function computeLayout(sorted, map) {
   Object.entries(cols).forEach(([col, nums]) => {
     const x = +col * (NODE_W + H_GAP) + 60;
     nums.forEach((num, row) => {
-      const y = row * (NODE_H + V_GAP) + 60;
-      positions[num] = { x, y };
+      positions[num] = { x, y: row * (NODE_H + V_GAP) + 60 };
     });
   });
 
@@ -419,7 +408,6 @@ function renderDiagram({ map, sorted }) {
     if (!map[+k]) delete nodePositions[+k];
   });
 
-  // Aristas primero (detrás de los nodos)
   const edgeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   edgeGroup.id = 'edge-group';
   diagramGroup.appendChild(edgeGroup);
@@ -428,7 +416,6 @@ function renderDiagram({ map, sorted }) {
   nodeGroup.id = 'node-group';
   diagramGroup.appendChild(nodeGroup);
 
-  // Identificar aristas críticas
   const criticalEdges = new Set();
   sorted.forEach(num => {
     const node = map[num];
@@ -439,7 +426,6 @@ function renderDiagram({ map, sorted }) {
     }
   });
 
-  // Dibujar aristas
   activities.forEach(act => {
     act.predecessors.forEach(pred => {
       if (!map[pred]) return;
@@ -447,9 +433,7 @@ function renderDiagram({ map, sorted }) {
     });
   });
 
-  // Dibujar nodos
-  sorted.forEach(num => drawNode(nodeGroup, map[num], edgeGroup));
-
+  sorted.forEach(num => drawNode(nodeGroup, map[num]));
   fitView(sorted);
 }
 
@@ -476,7 +460,7 @@ function updateEdge(path, fromNum, toNum) {
   path.setAttribute('d', `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`);
 }
 
-function drawNode(group, node, edgeGroup) {
+function drawNode(group, node) {
   const { num, name } = node;
   const pos    = nodePositions[num];
   const isCrit = node.slack === 0;
@@ -486,7 +470,6 @@ function drawNode(group, node, edgeGroup) {
   g.classList.add('node-group');
   g.id = `node-${num}`;
 
-  // ── Fondo ──
   const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
   rect.setAttribute('width',  NODE_W);
   rect.setAttribute('height', NODE_H);
@@ -496,39 +479,25 @@ function drawNode(group, node, edgeGroup) {
   if (isCrit) rect.classList.add('critical');
   g.appendChild(rect);
 
-  // ── Divisor horizontal (mitad) ──
-  appendLine(g, 0, NODE_H / 2, NODE_W, NODE_H / 2, stroke);
+  appendLine(g, 0,          NODE_H / 2, NODE_W,      NODE_H / 2, stroke);
+  appendLine(g, 32,         0,          32,           NODE_H / 2, stroke);
+  appendLine(g, NODE_W / 2, NODE_H / 2, NODE_W / 2,  NODE_H,     stroke);
 
-  // ── Divisor vertical en la mitad superior (separa # | nombre) ──
-  appendLine(g, 32, 0, 32, NODE_H / 2, stroke);
-
-  // ── Número de tarea (arriba izquierda) ──
   const lblNum = makeSVGText(`${num}`, 16, NODE_H / 4, 'node-num');
   if (isCrit) lblNum.style.fill = 'var(--critical)';
   g.appendChild(lblNum);
 
-  // ── Nombre de la tarea (arriba derecha, truncado) ──
-  const lblName = makeSVGText(truncate(name, 10), 32 + (NODE_W - 32) / 2, NODE_H / 4, 'node-label');
-  g.appendChild(lblName);
-
-  // ── Duración (centro del divisor horizontal) ──
-  const lblDur = makeSVGText(`${node.duration}`, NODE_W / 2, NODE_H / 2, 'node-duration-badge');
-  g.appendChild(lblDur);
-
-  // ── IC / TC / IT / TT en la mitad inferior ──
-  const lblIC = makeSVGText(`IC:${node.ES}`, NODE_W * 1/4,     NODE_H * 3/4 - 9, 'node-es');
-  const lblTC = makeSVGText(`TC:${node.EF}`, NODE_W * 3/4,     NODE_H * 3/4 - 9, 'node-ef');
-  const lblIT = makeSVGText(`IT:${node.LS}`, NODE_W * 1/4,     NODE_H * 3/4 + 9, 'node-ls');
-  const lblTT = makeSVGText(`TT:${node.LF}`, NODE_W * 3/4,     NODE_H * 3/4 + 9, 'node-lf');
-  [lblIC, lblTC, lblIT, lblTT].forEach(l => g.appendChild(l));
-
-  // ── Divisor vertical en la mitad inferior ──
-  appendLine(g, NODE_W / 2, NODE_H / 2, NODE_W / 2, NODE_H, stroke);
+  g.appendChild(makeSVGText(truncate(name, 10), 32 + (NODE_W - 32) / 2, NODE_H / 4,      'node-label'));
+  g.appendChild(makeSVGText(`${node.duration}`, NODE_W / 2,             NODE_H / 2,       'node-duration-badge'));
+  g.appendChild(makeSVGText(`IC:${node.ES}`,    NODE_W * 1/4,           NODE_H * 3/4 - 9, 'node-es'));
+  g.appendChild(makeSVGText(`TC:${node.EF}`,    NODE_W * 3/4,           NODE_H * 3/4 - 9, 'node-ef'));
+  g.appendChild(makeSVGText(`IT:${node.LS}`,    NODE_W * 1/4,           NODE_H * 3/4 + 9, 'node-ls'));
+  g.appendChild(makeSVGText(`TT:${node.LF}`,    NODE_W * 3/4,           NODE_H * 3/4 + 9, 'node-lf'));
 
   g.setAttribute('transform', `translate(${pos.x},${pos.y})`);
   group.appendChild(g);
 
-  makeDraggable(g, num, edgeGroup);
+  makeDraggable(g, num);
 }
 
 function appendLine(parent, x1, y1, x2, y2, stroke) {
@@ -554,8 +523,8 @@ function truncate(str, max) {
 }
 
 // ─── Drag ────────────────────────────────────────────────────────
-function makeDraggable(el, num, edgeGroup) {
-  let dragging  = false;
+function makeDraggable(el, num) {
+  let dragging   = false;
   let startMouse = { x: 0, y: 0 };
   let startPos   = { x: 0, y: 0 };
 
@@ -575,7 +544,6 @@ function makeDraggable(el, num, edgeGroup) {
     nodePositions[num] = { x: startPos.x + dx, y: startPos.y + dy };
     el.setAttribute('transform', `translate(${nodePositions[num].x},${nodePositions[num].y})`);
 
-    // Actualizar aristas conectadas
     activities.forEach(act => {
       act.predecessors.forEach(pred => {
         if (pred === num || act.num === num) {
@@ -594,8 +562,8 @@ function makeDraggable(el, num, edgeGroup) {
 // ─── Ajustar vista ───────────────────────────────────────────────
 function fitView(sorted) {
   if (sorted.length === 0) return;
-  const xs = sorted.map(n => nodePositions[n].x);
-  const ys = sorted.map(n => nodePositions[n].y);
+  const xs   = sorted.map(n => nodePositions[n].x);
+  const ys   = sorted.map(n => nodePositions[n].y);
   const minX = Math.min(...xs) - 20;
   const minY = Math.min(...ys) - 20;
   const maxX = Math.max(...xs) + NODE_W + 20;
@@ -624,3 +592,5 @@ document.head.appendChild(shakeStyle);
 
 // ─── Init ─────────────────────────────────────────────────────────
 renderTable();
+
+}); // fin DOMContentLoaded
