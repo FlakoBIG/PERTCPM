@@ -171,22 +171,51 @@ tbody td {
   vertical-align: middle;
 }
 
-.badge-name {
+.badge-num {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 6px;
   background: var(--accent-soft);
   color: var(--accent);
-  font-weight: 700;
+  font-weight: 800;
   font-size: .8rem;
   border: 1.5px solid var(--accent);
+  letter-spacing: -.3px;
 }
 
+.badge-num.sm {
+  min-width: 20px;
+  height: 20px;
+  font-size: .7rem;
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+.cell-name     { color: var(--text); font-weight: 500; }
+.cell-name-sm  { color: var(--text); font-size: .78rem; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cell-duration { color: var(--success); font-weight: 600; }
-.cell-pred     { color: var(--text-muted); font-size: .82rem; }
+.cell-pred     { font-size: .82rem; }
+
+/* Chips de predecesores */
+.pred-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: .72rem;
+  font-weight: 700;
+  margin-right: 3px;
+}
 
 .btn-row-delete {
   background: none;
@@ -411,22 +440,36 @@ tbody td {
 
 .node-label {
   fill: var(--text);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   text-anchor: middle;
   dominant-baseline: central;
   pointer-events: none;
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
-.node-duration {
-  fill: var(--success);
-  font-size: 10px;
-  font-weight: 600;
+.node-num {
+  fill: var(--accent);
+  font-size: 13px;
+  font-weight: 800;
   text-anchor: middle;
   dominant-baseline: central;
   pointer-events: none;
   font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.node-duration-badge {
+  fill: var(--surface);
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  paint-order: stroke;
+  stroke: var(--success);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 
 .node-es, .node-ef, .node-ls, .node-lf {
@@ -535,6 +578,41 @@ tbody td {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Badge de número en el modal */
+.modal-num-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.modal-num-label {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.modal-num-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 1rem;
+  border: 2px solid var(--accent);
+  letter-spacing: -.3px;
 }
 
 .modal-body label {
