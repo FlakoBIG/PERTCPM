@@ -35,7 +35,6 @@ const modalCancel   = document.getElementById('modal-cancel');
 const modalSave     = document.getElementById('modal-save');
 const inputName     = document.getElementById('input-name');
 const inputDuration = document.getElementById('input-duration');
-const inputPred     = document.getElementById('input-predecessors');
 
 // Zoom / pan
 const btnZoomIn    = document.getElementById('btn-zoom-in');
@@ -88,12 +87,70 @@ function getNextNum() {
   while (used.has(n)) n++;
   return n;
 }
-function openModal(title, num, name = '', duration = '', pred = '') {
+// ─── Estado del selector de predecesores ────────────────────────
+let selectedPreds = []; // array de nums seleccionados en el modal
+
+const predSelected = document.getElementById('pred-selected');
+const predOptions  = document.getElementById('pred-options');
+
+// Renderiza los chips seleccionados y la lista de opciones
+function renderPredSelector(excludeNum = null) {
+  // ── Chips seleccionados ──
+  predSelected.innerHTML = '';
+  selectedPreds.forEach(num => {
+    const act = activities.find(a => a.num === num);
+    if (!act) return;
+    const chip = document.createElement('span');
+    chip.className = 'pred-chip-selected';
+    chip.innerHTML = `
+      <span class="chip-num">#${act.num}</span>
+      <span class="chip-name">${act.name}</span>
+      <button class="pred-chip-remove" data-num="${act.num}" title="Quitar">✕</button>`;
+    predSelected.appendChild(chip);
+  });
+
+  predSelected.querySelectorAll('.pred-chip-remove').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      selectedPreds = selectedPreds.filter(n => n !== +btn.dataset.num);
+      renderPredSelector(excludeNum);
+    });
+  });
+
+  // ── Lista de opciones disponibles ──
+  predOptions.innerHTML = '';
+  const available = activities.filter(a => a.num !== excludeNum);
+
+  available.forEach(act => {
+    const isSelected = selectedPreds.includes(act.num);
+    const row = document.createElement('div');
+    row.className = `pred-option-row${isSelected ? ' selected' : ''}`;
+    row.dataset.num = act.num;
+    row.innerHTML = `
+      <span class="pred-opt-num">${act.num}</span>
+      <span class="pred-opt-name">${act.name}</span>
+      <span class="pred-opt-check">✓</span>`;
+
+    row.addEventListener('click', () => {
+      if (selectedPreds.includes(act.num)) {
+        selectedPreds = selectedPreds.filter(n => n !== act.num);
+      } else {
+        selectedPreds = [...selectedPreds, act.num];
+      }
+      renderPredSelector(excludeNum);
+    });
+
+    predOptions.appendChild(row);
+  });
+}
+
+function openModal(title, num, name = '', duration = '', predNums = []) {
   modalTitle.textContent    = title;
   modalNumBadge.textContent = `#${num}`;
   inputName.value           = name;
   inputDuration.value       = duration;
-  inputPred.value           = pred;
+  selectedPreds             = [...predNums];
+  renderPredSelector(num);
   modalOverlay.classList.remove('hidden');
   inputName.focus();
 }
@@ -105,34 +162,17 @@ function closeModal() {
 
 modalClose.addEventListener('click',  closeModal);
 modalCancel.addEventListener('click', closeModal);
-modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
+// No cerrar al hacer click fuera del modal
 
 // ─── Guardar actividad ───────────────────────────────────────────
 modalSave.addEventListener('click', () => {
   const name     = inputName.value.trim();
   const duration = parseFloat(inputDuration.value);
-  const predRaw  = inputPred.value.trim();
 
   if (!name)                           return shake(inputName);
   if (isNaN(duration) || duration < 0) return shake(inputDuration);
 
-  // Parsear predecesores como números enteros
-  const predecessors = predRaw
-    ? predRaw.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n))
-    : [];
-
-  // Validar que los predecesores existan
-  const existingNums = activities.map(a => a.num);
-  const invalid = predecessors.filter(p => {
-    // Al editar, el propio número es válido solo si no es él mismo
-    if (editingNum !== null) return p === editingNum || !existingNums.includes(p);
-    return !existingNums.includes(p);
-  });
-  if (invalid.length > 0) {
-    shake(inputPred);
-    inputPred.placeholder = `Números inválidos: ${invalid.join(', ')}`;
-    return;
-  }
+  const predecessors = [...selectedPreds];
 
   if (editingNum !== null) {
     const act = activities.find(a => a.num === editingNum);
@@ -145,7 +185,7 @@ modalSave.addEventListener('click', () => {
   closeModal();
 });
 
-[inputName, inputDuration, inputPred].forEach(el =>
+[inputName, inputDuration].forEach(el =>
   el.addEventListener('keydown', e => { if (e.key === 'Enter') modalSave.click(); })
 );
 
@@ -166,7 +206,7 @@ function editActivity(num) {
   const act = activities.find(a => a.num === num);
   if (!act) return;
   editingNum = num;
-  openModal('Editar actividad', num, act.name, act.duration, act.predecessors.join(', '));
+  openModal('Editar actividad', num, act.name, act.duration, act.predecessors);
 }
 
 function deleteActivity(num) {

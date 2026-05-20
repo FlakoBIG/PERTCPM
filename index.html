@@ -116,9 +116,13 @@
           <input type="number" id="input-duration" placeholder="Ej: 5" min="0" step="0.5" />
         </label>
         <label>
-          Predecesores <span class="hint">(números de tarea separados por coma, vacío si no tiene)</span>
-          <input type="text" id="input-predecessors" placeholder="Ej: 1, 2, 3" />
+          Predecesores
+          <span class="hint">(selecciona las tareas que preceden a esta)</span>
         </label>
+        <!-- Chips de predecesores seleccionados -->
+        <div id="pred-selected" class="pred-selected-wrap"></div>
+        <!-- Lista de tareas disponibles para seleccionar -->
+        <div id="pred-options" class="pred-options-list"></div>
       </div>
       <div class="modal-footer">
         <button id="modal-cancel" class="btn btn-ghost">Cancelar</button>

@@ -654,8 +654,168 @@ tbody td {
   border-top: 1px solid var(--border);
 }
 
-/* ─── Utilities ─────────────────────────────────────────────── */
-.hidden { display: none !important; }
+/* ─── Selector de predecesores ──────────────────────────────── */
+.pred-label-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* Zona de chips seleccionados */
+.pred-selected-wrap {
+  min-height: 38px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition);
+}
+
+.pred-selected-wrap:empty::before {
+  content: 'Ningún predecesor seleccionado';
+  color: var(--text-muted);
+  font-size: .8rem;
+  font-style: italic;
+}
+
+/* Chip seleccionado (con botón de quitar) */
+.pred-chip-selected {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  border: 1.5px solid var(--accent);
+  color: var(--text);
+  font-size: .78rem;
+  font-weight: 600;
+  animation: chip-in .15s ease;
+}
+
+@keyframes chip-in {
+  from { opacity: 0; transform: scale(.8); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.pred-chip-selected .chip-num {
+  color: var(--accent);
+  font-weight: 800;
+  font-size: .8rem;
+}
+
+.pred-chip-selected .chip-name {
+  color: var(--text-muted);
+  font-size: .74rem;
+}
+
+.pred-chip-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: .75rem;
+  padding: 0 1px;
+  line-height: 1;
+  border-radius: 3px;
+  transition: color var(--transition);
+  display: flex;
+  align-items: center;
+}
+.pred-chip-remove:hover { color: var(--danger); }
+
+/* Lista de opciones disponibles */
+.pred-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  padding: 4px;
+}
+
+.pred-options-list::-webkit-scrollbar { width: 4px; }
+.pred-options-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+.pred-options-list:empty::after {
+  content: 'No hay otras tareas disponibles';
+  display: block;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: .78rem;
+  padding: 12px 8px;
+  font-style: italic;
+}
+
+/* Fila de opción */
+.pred-option-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--transition);
+  user-select: none;
+}
+
+.pred-option-row:hover { background: var(--surface2); }
+
+.pred-option-row.selected {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+}
+
+.pred-option-row.selected:hover { background: #6c63ff33; }
+
+.pred-opt-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  color: var(--accent);
+  font-weight: 800;
+  font-size: .78rem;
+  flex-shrink: 0;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.pred-option-row.selected .pred-opt-num {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.pred-opt-name {
+  flex: 1;
+  font-size: .82rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.pred-opt-check {
+  font-size: .85rem;
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.pred-option-row.selected .pred-opt-check { opacity: 1; }
 
 /* ─── Responsive ────────────────────────────────────────────── */
 @media (max-width: 768px) {
