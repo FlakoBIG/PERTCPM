@@ -23,8 +23,12 @@
   </header>
 
   <main>
-    <!-- Panel izquierdo: tabla de actividades -->
-    <aside class="panel">
+    <!-- ── Panel izquierdo ── -->
+    <aside class="panel" id="panel">
+
+      <!-- Manija de redimensionado -->
+      <div class="panel-resize-handle" id="panel-resize-handle" title="Arrastra para redimensionar"></div>
+
       <div class="panel-header">
         <h2>Actividades</h2>
         <button id="btn-add" class="btn btn-primary">+ Agregar</button>
@@ -41,15 +45,23 @@
               <th></th>
             </tr>
           </thead>
-          <tbody id="activity-body">
-            <!-- filas dinámicas -->
-          </tbody>
+          <tbody id="activity-body"></tbody>
         </table>
       </div>
 
       <div class="panel-actions">
         <button id="btn-generate" class="btn btn-success">Generar Diagrama</button>
-        <button id="btn-clear" class="btn btn-ghost">Limpiar todo</button>
+        <button id="btn-clear"    class="btn btn-ghost">Limpiar todo</button>
+      </div>
+
+      <!-- Exportar / Importar -->
+      <div class="panel-io">
+        <button id="btn-export" class="btn btn-io" title="Exportar actividades como texto">
+          <span class="io-icon">↑</span> Exportar
+        </button>
+        <button id="btn-import" class="btn btn-io" title="Importar actividades desde texto">
+          <span class="io-icon">↓</span> Importar
+        </button>
       </div>
 
       <!-- Resultados CPM -->
@@ -63,25 +75,29 @@
       </div>
     </aside>
 
-    <!-- Panel derecho: canvas del diagrama -->
+    <!-- ── Canvas ── -->
     <section class="canvas-section">
       <div class="canvas-toolbar">
         <span class="toolbar-hint">Arrastra los nodos para reorganizar el diagrama</span>
         <div class="toolbar-right">
-          <button id="btn-zoom-in"  class="btn btn-icon" title="Acercar">+</button>
-          <button id="btn-zoom-out" class="btn btn-icon" title="Alejar">−</button>
+          <!-- Selector de tipo de diagrama -->
+          <div class="diagram-type-toggle" id="diagram-type-toggle">
+            <button class="type-btn active" data-type="AON" title="Actividad en el Nodo">AON</button>
+            <button class="type-btn"        data-type="AOA" title="Actividad en la Flecha">AOA</button>
+          </div>
+          <div class="toolbar-sep"></div>
+          <button id="btn-zoom-in"    class="btn btn-icon" title="Acercar">+</button>
+          <button id="btn-zoom-out"   class="btn btn-icon" title="Alejar">−</button>
           <button id="btn-zoom-reset" class="btn btn-icon" title="Restablecer zoom">⊙</button>
         </div>
       </div>
       <div class="canvas-container" id="canvas-container">
         <svg id="diagram-svg" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <marker id="arrow" markerWidth="10" markerHeight="7"
-                    refX="9" refY="3.5" orient="auto">
+            <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
               <polygon points="0 0, 10 3.5, 0 7" class="arrow-head" />
             </marker>
-            <marker id="arrow-critical" markerWidth="10" markerHeight="7"
-                    refX="9" refY="3.5" orient="auto">
+            <marker id="arrow-critical" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
               <polygon points="0 0, 10 3.5, 0 7" class="arrow-head-critical" />
             </marker>
           </defs>
@@ -95,7 +111,7 @@
     </section>
   </main>
 
-  <!-- Modal para editar actividad -->
+  <!-- ── Modal actividad ── -->
   <div id="modal-overlay" class="modal-overlay hidden">
     <div class="modal">
       <div class="modal-header">
@@ -119,14 +135,53 @@
           Predecesores
           <span class="hint">(selecciona las tareas que preceden a esta)</span>
         </label>
-        <!-- Chips de predecesores seleccionados -->
         <div id="pred-selected" class="pred-selected-wrap"></div>
-        <!-- Lista de tareas disponibles para seleccionar -->
-        <div id="pred-options" class="pred-options-list"></div>
+        <div id="pred-options"  class="pred-options-list"></div>
       </div>
       <div class="modal-footer">
         <button id="modal-cancel" class="btn btn-ghost">Cancelar</button>
         <button id="modal-save"   class="btn btn-primary">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal importar ── -->
+  <div id="import-overlay" class="modal-overlay hidden">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3>Importar actividades</h3>
+        <button id="import-close" class="btn-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="import-hint">
+          Pega el texto exportado previamente. Cada línea debe tener el formato:<br />
+          <code>#NUM | Nombre | Duración | Predecesores</code>
+        </p>
+        <textarea id="import-textarea" class="import-textarea"
+          placeholder="#1 | Diseño       | 5 | —&#10;#2 | Desarrollo   | 8 | 1&#10;#3 | Pruebas      | 3 | 2"></textarea>
+        <p id="import-error" class="import-error hidden"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="import-cancel" class="btn btn-ghost">Cancelar</button>
+        <button id="import-confirm" class="btn btn-primary">Importar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal exportar ── -->
+  <div id="export-overlay" class="modal-overlay hidden">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3>Exportar actividades</h3>
+        <button id="export-close" class="btn-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="import-hint">Copia este texto para guardar o compartir tus actividades.</p>
+        <textarea id="export-textarea" class="import-textarea" readonly></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="export-copy" class="btn btn-primary">Copiar al portapapeles</button>
+        <button id="export-close2" class="btn btn-ghost">Cerrar</button>
       </div>
     </div>
   </div>
