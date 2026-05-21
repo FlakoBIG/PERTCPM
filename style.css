@@ -1029,6 +1029,34 @@ tbody td {
 /* ─── Utilities ─────────────────────────────────────────────── */
 .hidden { display: none !important; }
 
+/* ─── Modal pequeño (confirmación) ─────────────────────────── */
+.modal-sm {
+  width: 360px;
+}
+
+.confirm-icon {
+  font-size: 2.4rem;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.confirm-msg {
+  font-size: .88rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.7;
+}
+
+.confirm-msg strong {
+  color: var(--text);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+.btn-danger:hover { opacity: .88; }
+
 /* ─── Responsive ────────────────────────────────────────────── */
 @media (max-width: 768px) {
   main { flex-direction: column; }

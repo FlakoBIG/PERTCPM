@@ -56,6 +56,12 @@ const importConfirm  = document.getElementById('import-confirm');
 const importTextarea = document.getElementById('import-textarea');
 const importError    = document.getElementById('import-error');
 
+// Modal confirmar limpiar
+const clearOverlay  = document.getElementById('clear-overlay');
+const clearClose    = document.getElementById('clear-close');
+const clearCancel   = document.getElementById('clear-cancel');
+const clearConfirm  = document.getElementById('clear-confirm');
+
 // Zoom / pan
 const btnZoomIn    = document.getElementById('btn-zoom-in');
 const btnZoomOut   = document.getElementById('btn-zoom-out');
@@ -296,8 +302,15 @@ function renderTable() {
     b.addEventListener('click', () => deleteActivity(+b.dataset.num)));
 }
 
-// ─── Limpiar todo ────────────────────────────────────────────────
+// ─── Limpiar todo (con confirmación) ────────────────────────────
 btnClear.addEventListener('click', () => {
+  clearOverlay.classList.remove('hidden');
+});
+
+clearClose.addEventListener('click',  () => clearOverlay.classList.add('hidden'));
+clearCancel.addEventListener('click', () => clearOverlay.classList.add('hidden'));
+
+clearConfirm.addEventListener('click', () => {
   activities    = [];
   nodePositions = {};
   lastCPM       = null;
@@ -307,6 +320,7 @@ btnClear.addEventListener('click', () => {
   cpmResults.classList.add('hidden');
   scale = 1; panX = 0; panY = 0;
   applyTransform();
+  clearOverlay.classList.add('hidden');
 });
 
 // ─── Exportar ────────────────────────────────────────────────────
