@@ -297,6 +297,21 @@ tbody td {
   margin-bottom: 12px;
 }
 
+.cpm-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.cpm-results-header h3 { margin-bottom: 0; }
+
+.btn-copy-cpm {
+  flex: none !important;
+  font-size: .72rem;
+  padding: 5px 10px;
+}
+
 .cpm-results table {
   font-size: .78rem;
 }

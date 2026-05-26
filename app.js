@@ -7,7 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // ─── Estado ─────────────────────────────────────────────────────
 let activities    = [];
 let editingNum    = null;
-let nodePositions = {};
+// Posiciones separadas por tipo de diagrama para preservar el layout al cambiar
+let nodePositions = { AON: {}, AOA: {} };
 let selectedPreds = [];
 let diagramType   = 'AON'; // 'AON' | 'AOA'
 let lastCPM       = null;
@@ -142,8 +143,8 @@ diagramTypeToggle.querySelectorAll('.type-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     diagramTypeToggle.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    diagramType   = btn.dataset.type;
-    nodePositions = {};
+    diagramType = btn.dataset.type;
+    // NO se borran las posiciones — cada tipo tiene su propio objeto
     if (lastCPM) {
       renderDiagram(lastCPM);
       emptyState.classList.add('hidden');
@@ -312,7 +313,7 @@ clearCancel.addEventListener('click', () => clearOverlay.classList.add('hidden')
 
 clearConfirm.addEventListener('click', () => {
   activities    = [];
-  nodePositions = {};
+  nodePositions = { AON: {}, AOA: {} };
   lastCPM       = null;
   renderTable();
   diagramGroup.innerHTML = '';
@@ -386,7 +387,7 @@ importConfirm.addEventListener('click', () => {
   }
 
   activities    = parsed;
-  nodePositions = {};
+  nodePositions = { AON: {}, AOA: {} };
   lastCPM       = null;
   renderTable();
   diagramGroup.innerHTML = '';
@@ -482,6 +483,74 @@ function renderCPMTable({ map, projectEnd }) {
   cpmResults.classList.remove('hidden');
 }
 
+// ─── Copiar tabla CPM ────────────────────────────────────────────
+document.getElementById('btn-copy-cpm').addEventListener('click', () => {
+  if (!lastCPM) return;
+  const { map, projectEnd } = lastCPM;
+
+  // ── HTML para Word / Google Docs (se pega como tabla) ──
+  const headerHtml = ['#', 'Nombre', 'Duración', 'Predecesores', 'IC', 'TC', 'IT', 'TT', 'Holgura']
+    .map(h => `<th style="background:#1a1d27;color:#e2e8f0;padding:6px 10px;border:1px solid #2e3350;font-size:12px">${h}</th>`)
+    .join('');
+
+  const rowsHtml = Object.values(map).map(n => {
+    const pred   = n.predecessors.length ? n.predecessors.join(', ') : '—';
+    const isCrit = n.slack === 0;
+    const bg     = isCrit ? '#ff9f4318' : '#22263a';
+    const color  = isCrit ? '#ff9f43'   : '#e2e8f0';
+    const cells  = [n.num, n.name, n.duration, pred, n.ES, n.EF, n.LS, n.LF, n.slack]
+      .map(v => `<td style="padding:5px 10px;border:1px solid #2e3350;color:${color};font-size:12px">${v}</td>`)
+      .join('');
+    return `<tr style="background:${bg}">${cells}</tr>`;
+  }).join('');
+
+  const tableHtml = `
+    <meta charset="utf-8">
+    <table style="border-collapse:collapse;font-family:Segoe UI,sans-serif">
+      <thead><tr>${headerHtml}</tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <p style="font-size:12px;color:#7a82a6;margin-top:8px">
+      Duración total del proyecto: <strong>${projectEnd}</strong>
+      &nbsp;|&nbsp; ★ = Ruta crítica
+    </p>`;
+
+  // ── Texto plano con tabs (fallback) ──
+  const headerTxt = ['#', 'Nombre', 'Duración', 'Predecesores', 'IC', 'TC', 'IT', 'TT', 'Holgura'].join('\t');
+  const rowsTxt   = Object.values(map).map(n => {
+    const pred = n.predecessors.length ? n.predecessors.join(', ') : '—';
+    const mark = n.slack === 0 ? ' ★' : '';
+    return [n.num + mark, n.name, n.duration, pred, n.ES, n.EF, n.LS, n.LF, n.slack].join('\t');
+  }).join('\n');
+  const plainText = `${headerTxt}\n${rowsTxt}\n\nDuración total: ${projectEnd}`;
+
+  const btn = document.getElementById('btn-copy-cpm');
+
+  // Intentar copiar con HTML (soportado en Chrome/Edge)
+  if (window.ClipboardItem) {
+    const htmlBlob  = new Blob([tableHtml], { type: 'text/html' });
+    const plainBlob = new Blob([plainText], { type: 'text/plain' });
+    navigator.clipboard.write([new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': plainBlob })])
+      .then(() => {
+        btn.innerHTML = '<span class="io-icon">✓</span> ¡Copiado!';
+        setTimeout(() => { btn.innerHTML = '<span class="io-icon">⎘</span> Copiar tabla'; }, 2000);
+      })
+      .catch(() => {
+        // Fallback: solo texto plano
+        navigator.clipboard.writeText(plainText).then(() => {
+          btn.innerHTML = '<span class="io-icon">✓</span> ¡Copiado!';
+          setTimeout(() => { btn.innerHTML = '<span class="io-icon">⎘</span> Copiar tabla'; }, 2000);
+        });
+      });
+  } else {
+    // Firefox fallback
+    navigator.clipboard.writeText(plainText).then(() => {
+      btn.innerHTML = '<span class="io-icon">✓</span> ¡Copiado!';
+      setTimeout(() => { btn.innerHTML = '<span class="io-icon">⎘</span> Copiar tabla'; }, 2000);
+    });
+  }
+});
+
 // ═══════════════════════════════════════════════════════════════
 //  DIAGRAMA AON  (Activity on Node)
 // ═══════════════════════════════════════════════════════════════
@@ -514,9 +583,10 @@ function renderDiagram(cpm) {
 
 function renderDiagramAON({ map, sorted }) {
   diagramGroup.innerHTML = '';
+  const pos = nodePositions.AON;
   const layout = computeLayout(sorted, map);
-  sorted.forEach(num => { if (!nodePositions[num]) nodePositions[num] = layout[num]; });
-  Object.keys(nodePositions).forEach(k => { if (!map[+k]) delete nodePositions[+k]; });
+  sorted.forEach(num => { if (!pos[num]) pos[num] = layout[num]; });
+  Object.keys(pos).forEach(k => { if (!map[+k]) delete pos[+k]; });
 
   const edgeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   edgeGroup.id = 'edge-group';
@@ -556,7 +626,7 @@ function drawEdgeAON(group, fromNum, toNum, isCritical) {
 }
 
 function updateEdgeAON(path, fromNum, toNum) {
-  const fp = nodePositions[fromNum], tp = nodePositions[toNum];
+  const fp = nodePositions.AON[fromNum], tp = nodePositions.AON[toNum];
   if (!fp || !tp) return;
   const x1 = fp.x + NODE_W, y1 = fp.y + NODE_H / 2;
   const x2 = tp.x,          y2 = tp.y + NODE_H / 2;
@@ -566,7 +636,7 @@ function updateEdgeAON(path, fromNum, toNum) {
 
 function drawNodeAON(group, node) {
   const { num, name } = node;
-  const pos    = nodePositions[num];
+  const pos    = nodePositions.AON[num];
   const isCrit = node.slack === 0;
   const stroke = isCrit ? 'var(--critical)' : 'var(--border)';
 
@@ -607,13 +677,13 @@ function makeDraggableAON(el, num) {
     e.stopPropagation();
     dragging = true;
     startMouse = { x: e.clientX, y: e.clientY };
-    startPos   = { ...nodePositions[num] };
+    startPos   = { ...nodePositions.AON[num] };
     el.style.cursor = 'grabbing';
   });
   window.addEventListener('mousemove', e => {
     if (!dragging) return;
-    nodePositions[num] = { x: startPos.x + (e.clientX-startMouse.x)/scale, y: startPos.y + (e.clientY-startMouse.y)/scale };
-    el.setAttribute('transform', `translate(${nodePositions[num].x},${nodePositions[num].y})`);
+    nodePositions.AON[num] = { x: startPos.x + (e.clientX-startMouse.x)/scale, y: startPos.y + (e.clientY-startMouse.y)/scale };
+    el.setAttribute('transform', `translate(${nodePositions.AON[num].x},${nodePositions.AON[num].y})`);
     activities.forEach(act => {
       act.predecessors.forEach(pred => {
         if (pred === num || act.num === num) {
@@ -703,14 +773,14 @@ function layoutAOA(nodes, arrows, sorted) {
 
 function renderDiagramAOA({ map, sorted }) {
   diagramGroup.innerHTML = '';
-
   const { nodes, arrows } = buildAOAGraph(activities, map);
   const aoaPositions = layoutAOA(nodes, arrows, sorted);
+  const pos = nodePositions.AOA;
 
   // Merge con posiciones guardadas
   Object.keys(nodes).forEach(id => {
     const key = `aoa_${id}`;
-    if (!nodePositions[key]) nodePositions[key] = aoaPositions[+id] || { x: 60, y: 60 };
+    if (!pos[key]) pos[key] = aoaPositions[+id] || { x: 60, y: 60 };
   });
 
   const edgeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -765,8 +835,8 @@ function drawArrowAOA(group, arr, idx) {
 }
 
 function updateArrowAOA(g, arr, idx) {
-  const fp = nodePositions[`aoa_${arr.from}`];
-  const tp = nodePositions[`aoa_${arr.to}`];
+  const fp = nodePositions.AOA[`aoa_${arr.from}`];
+  const tp = nodePositions.AOA[`aoa_${arr.to}`];
   if (!fp || !tp) return;
 
   const dx = tp.x - fp.x, dy = tp.y - fp.y;
@@ -799,7 +869,7 @@ function updateArrowAOA(g, arr, idx) {
 
 function drawNodeAOA(group, id, node, arrows) {
   const key = `aoa_${id}`;
-  const pos = nodePositions[key];
+  const pos = nodePositions.AOA[key];
 
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   g.classList.add('node-group', 'aoa-node-group');
@@ -826,16 +896,16 @@ function drawNodeAOA(group, id, node, arrows) {
     e.stopPropagation();
     dragging = true;
     startMouse = { x: e.clientX, y: e.clientY };
-    startPos   = { ...nodePositions[key] };
+    startPos   = { ...nodePositions.AOA[key] };
     g.style.cursor = 'grabbing';
   });
   window.addEventListener('mousemove', e => {
     if (!dragging) return;
-    nodePositions[key] = {
+    nodePositions.AOA[key] = {
       x: startPos.x + (e.clientX - startMouse.x) / scale,
       y: startPos.y + (e.clientY - startMouse.y) / scale
     };
-    g.setAttribute('transform', `translate(${nodePositions[key].x - AOA_R},${nodePositions[key].y - AOA_R})`);
+    g.setAttribute('transform', `translate(${nodePositions.AOA[key].x - AOA_R},${nodePositions.AOA[key].y - AOA_R})`);
     // Actualizar flechas conectadas
     arrows.forEach((arr, idx) => {
       if (arr.from === id || arr.to === id) {
@@ -852,8 +922,9 @@ function drawNodeAOA(group, id, node, arrows) {
 // ═══════════════════════════════════════════════════════════════
 function fitView(keys, nw, nh, isAOA = false) {
   if (!keys.length) return;
-  const xs = keys.map(k => isAOA ? nodePositions[k]?.x ?? 60 : nodePositions[k]?.x ?? 60);
-  const ys = keys.map(k => isAOA ? nodePositions[k]?.y ?? 60 : nodePositions[k]?.y ?? 60);
+  const posMap = isAOA ? nodePositions.AOA : nodePositions.AON;
+  const xs = keys.map(k => posMap[k]?.x ?? 60);
+  const ys = keys.map(k => posMap[k]?.y ?? 60);
   const minX = Math.min(...xs) - (isAOA ? AOA_R : 0) - 20;
   const minY = Math.min(...ys) - (isAOA ? AOA_R : 0) - 20;
   const maxX = Math.max(...xs) + (nw || NODE_W) + 20;
