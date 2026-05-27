@@ -22,6 +22,8 @@ const btnExport       = document.getElementById('btn-export');
 const btnImport       = document.getElementById('btn-import');
 const cpmResults      = document.getElementById('cpm-results');
 const cpmTableWrap    = document.getElementById('cpm-table-wrapper');
+const cpmProcedure    = document.getElementById('cpm-procedure');
+const toggleProcedure = document.getElementById('toggle-procedure');
 const totalDuration   = document.getElementById('total-duration');
 const emptyState      = document.getElementById('empty-state');
 const svgEl           = document.getElementById('diagram-svg');
@@ -29,6 +31,44 @@ const diagramGroup    = document.getElementById('diagram-group');
 const canvasContainer = document.getElementById('canvas-container');
 const panel           = document.getElementById('panel');
 const resizeHandle    = document.getElementById('panel-resize-handle');
+const btnCollapsePanel = document.getElementById('btn-collapse-panel');
+
+// ─── Colapsar / expandir panel lateral (botón hamburguesa) ──────
+let panelCollapsed  = false;
+let panelWidthSaved = null;
+
+btnCollapsePanel.addEventListener('click', () => {
+  panelCollapsed = !panelCollapsed;
+  if (panelCollapsed) {
+    panelWidthSaved = panel.style.width || null;
+    panel.classList.add('collapsed');
+    btnCollapsePanel.classList.add('active');
+    btnCollapsePanel.title = 'Expandir panel';
+  } else {
+    panel.classList.remove('collapsed');
+    btnCollapsePanel.classList.remove('active');
+    if (panelWidthSaved) panel.style.width = panelWidthSaved;
+    btnCollapsePanel.title = 'Plegar panel';
+  }
+});
+
+// ─── Colapsar / expandir sección de actividades (hacia arriba) ───
+const activitiesSection     = document.getElementById('activities-section');
+const btnCollapseActivities = document.getElementById('btn-collapse-activities');
+let activitiesCollapsed = false;
+
+btnCollapseActivities.addEventListener('click', () => {
+  activitiesCollapsed = !activitiesCollapsed;
+  if (activitiesCollapsed) {
+    activitiesSection.classList.add('collapsed');
+    btnCollapseActivities.classList.add('expanded');
+    btnCollapseActivities.title = 'Expandir actividades';
+  } else {
+    activitiesSection.classList.remove('collapsed');
+    btnCollapseActivities.classList.remove('expanded');
+    btnCollapseActivities.title = 'Colapsar actividades';
+  }
+});
 
 // Modal actividad
 const modalOverlay  = document.getElementById('modal-overlay');
@@ -456,6 +496,7 @@ btnGenerate.addEventListener('click', () => {
   }
   lastCPM = cpm;
   renderCPMTable(cpm);
+  renderCPMProcedure(cpm);
   renderDiagram(cpm);
   emptyState.classList.add('hidden');
 });
@@ -483,10 +524,149 @@ function renderCPMTable({ map, projectEnd }) {
   cpmResults.classList.remove('hidden');
 }
 
+// ─── Toggle procedimiento ────────────────────────────────────────
+toggleProcedure.addEventListener('change', () => {
+  if (toggleProcedure.checked) {
+    cpmProcedure.classList.remove('hidden');
+  } else {
+    cpmProcedure.classList.add('hidden');
+  }
+});
+
+// ─── Procedimiento matemático CPM ───────────────────────────────
+function renderCPMProcedure({ map, sorted, projectEnd }) {
+  const nodes = Object.values(map);
+
+  // ── Paso 1: Pase hacia adelante (IC / TC) ──
+  let forwardSteps = '';
+  sorted.forEach(num => {
+    const n = map[num];
+    const isCrit = n.slack === 0;
+    const badgeCls = isCrit ? 'critical' : '';
+    const stepCls  = isCrit ? 'is-critical' : '';
+    let formula = '';
+    if (n.predecessors.length === 0) {
+      formula = `<span class="val-es">IC</span> <span class="op">=</span> <span class="val-dur">0</span> <span class="op">(sin predecesores → inicio del proyecto)</span><br>
+                 <span class="val-ef">TC</span> <span class="op">=</span> <span class="val-es">IC</span> <span class="op">+</span> <span class="val-dur">Dur</span> <span class="op">=</span> <span class="val-es">${n.ES}</span> <span class="op">+</span> <span class="val-dur">${n.duration}</span> <span class="op">=</span> <span class="val-ef">${n.EF}</span>`;
+    } else {
+      const predList = n.predecessors.map(p => {
+        const pn = map[p];
+        return `TC(${p})=<span class="val-ef">${pn ? pn.EF : '?'}</span>`;
+      }).join(', ');
+      const maxExpr = n.predecessors.length > 1
+        ? `máx(${predList}) = <span class="val-es">${n.ES}</span>`
+        : `${predList} = <span class="val-es">${n.ES}</span>`;
+      formula = `<span class="val-es">IC</span> <span class="op">=</span> ${maxExpr}<br>
+                 <span class="val-ef">TC</span> <span class="op">=</span> <span class="val-es">IC</span> <span class="op">+</span> <span class="val-dur">Dur</span> <span class="op">=</span> <span class="val-es">${n.ES}</span> <span class="op">+</span> <span class="val-dur">${n.duration}</span> <span class="op">=</span> <span class="val-ef">${n.EF}</span>`;
+    }
+    forwardSteps += `
+      <div class="proc-step ${stepCls}">
+        <div class="proc-step-header">
+          <span class="proc-act-badge ${badgeCls}">${n.num}</span>
+          <span class="proc-act-name">${n.name}</span>
+        </div>
+        <div class="proc-formula">${formula}</div>
+      </div>`;
+  });
+
+  // ── Paso 2: Pase hacia atrás (IT / TT) ──
+  let backwardSteps = '';
+  [...sorted].reverse().forEach(num => {
+    const n = map[num];
+    const isCrit = n.slack === 0;
+    const badgeCls = isCrit ? 'critical' : '';
+    const stepCls  = isCrit ? 'is-critical' : '';
+    const successors = Object.values(map).filter(s => s.predecessors.includes(num));
+    let formula = '';
+    if (successors.length === 0) {
+      formula = `<span class="val-lf">TT</span> <span class="op">=</span> <span class="val-dur">${projectEnd}</span> <span class="op">(fin del proyecto)</span><br>
+                 <span class="val-ls">IT</span> <span class="op">=</span> <span class="val-lf">TT</span> <span class="op">−</span> <span class="val-dur">Dur</span> <span class="op">=</span> <span class="val-lf">${n.LF}</span> <span class="op">−</span> <span class="val-dur">${n.duration}</span> <span class="op">=</span> <span class="val-ls">${n.LS}</span>`;
+    } else {
+      const sucList = successors.map(s => `IT(${s.num})=<span class="val-ls">${s.LS}</span>`).join(', ');
+      const minExpr = successors.length > 1
+        ? `mín(${sucList}) = <span class="val-lf">${n.LF}</span>`
+        : `${sucList} = <span class="val-lf">${n.LF}</span>`;
+      formula = `<span class="val-lf">TT</span> <span class="op">=</span> ${minExpr}<br>
+                 <span class="val-ls">IT</span> <span class="op">=</span> <span class="val-lf">TT</span> <span class="op">−</span> <span class="val-dur">Dur</span> <span class="op">=</span> <span class="val-lf">${n.LF}</span> <span class="op">−</span> <span class="val-dur">${n.duration}</span> <span class="op">=</span> <span class="val-ls">${n.LS}</span>`;
+    }
+    backwardSteps += `
+      <div class="proc-step ${stepCls}">
+        <div class="proc-step-header">
+          <span class="proc-act-badge ${badgeCls}">${n.num}</span>
+          <span class="proc-act-name">${n.name}</span>
+        </div>
+        <div class="proc-formula">${formula}</div>
+      </div>`;
+  });
+
+  // ── Paso 3: Holguras ──
+  let slackSteps = '';
+  sorted.forEach(num => {
+    const n = map[num];
+    const isCrit = n.slack === 0;
+    const badgeCls = isCrit ? 'critical' : '';
+    const stepCls  = isCrit ? 'is-critical' : '';
+    const slackColor = isCrit ? 'val-crit' : 'val-sl';
+    slackSteps += `
+      <div class="proc-step ${stepCls}">
+        <div class="proc-step-header">
+          <span class="proc-act-badge ${badgeCls}">${n.num}</span>
+          <span class="proc-act-name">${n.name}</span>
+        </div>
+        <div class="proc-formula">
+          <span class="val-sl">Holgura</span> <span class="op">=</span> <span class="val-lf">TT</span> <span class="op">−</span> <span class="val-ef">TC</span>
+          <span class="op">=</span> <span class="val-lf">${n.LF}</span> <span class="op">−</span> <span class="val-ef">${n.EF}</span>
+          <span class="op">=</span> <span class="${slackColor}">${n.slack}</span>
+          ${isCrit ? '<span class="op"> → ★ Ruta crítica</span>' : ''}
+        </div>
+      </div>`;
+  });
+
+  // ── Paso 4: Ruta crítica ──
+  const critNodes = sorted.filter(num => map[num].slack === 0);
+  const critPath = critNodes.map(num =>
+    `<span class="crit-act">#${num} ${map[num].name}</span>`
+  ).join(' <span class="crit-path-arrow">→</span> ');
+
+  const legend = `
+    <div class="proc-legend">
+      <div class="proc-legend-item"><div class="proc-legend-dot" style="background:#60a5fa"></div> IC = Inicio más temprano</div>
+      <div class="proc-legend-item"><div class="proc-legend-dot" style="background:#34d399"></div> TC = Término más temprano</div>
+      <div class="proc-legend-item"><div class="proc-legend-dot" style="background:#f472b6"></div> IT = Inicio más tardío</div>
+      <div class="proc-legend-item"><div class="proc-legend-dot" style="background:#fb923c"></div> TT = Término más tardío</div>
+      <div class="proc-legend-item"><div class="proc-legend-dot" style="background:var(--success)"></div> Holgura = TT − TC</div>
+    </div>`;
+
+  cpmProcedure.innerHTML = `
+    <div class="proc-section">
+      <div class="proc-section-title forward"><span class="proc-icon">→</span> Paso 1 — Pase hacia adelante (IC y TC)</div>
+      <div class="proc-steps">${forwardSteps}</div>
+      ${legend}
+    </div>
+    <div class="proc-section">
+      <div class="proc-section-title backward"><span class="proc-icon">←</span> Paso 2 — Pase hacia atrás (IT y TT)</div>
+      <div class="proc-steps">${backwardSteps}</div>
+    </div>
+    <div class="proc-section">
+      <div class="proc-section-title slack"><span class="proc-icon">⊘</span> Paso 3 — Cálculo de holguras</div>
+      <div class="proc-steps">${slackSteps}</div>
+    </div>
+    <div class="proc-section">
+      <div class="proc-section-title critical"><span class="proc-icon">★</span> Paso 4 — Ruta crítica (Holgura = 0)</div>
+      <div class="proc-critical-list">
+        ${critPath}<br>
+        <span style="font-size:.72rem;margin-top:6px;display:inline-block">
+          Duración total del proyecto: <strong style="color:var(--critical)">${projectEnd}</strong>
+        </span>
+      </div>
+    </div>`;
+}
+
 // ─── Copiar tabla CPM ────────────────────────────────────────────
 document.getElementById('btn-copy-cpm').addEventListener('click', () => {
   if (!lastCPM) return;
-  const { map, projectEnd } = lastCPM;
+  const { map, projectEnd, sorted } = lastCPM;
+  const showProc = toggleProcedure.checked;
 
   // ── HTML para Word / Google Docs (se pega como tabla) ──
   const headerHtml = ['#', 'Nombre', 'Duración', 'Predecesores', 'IC', 'TC', 'IT', 'TT', 'Holgura']
@@ -504,7 +684,7 @@ document.getElementById('btn-copy-cpm').addEventListener('click', () => {
     return `<tr style="background:${bg}">${cells}</tr>`;
   }).join('');
 
-  const tableHtml = `
+  let tableHtml = `
     <meta charset="utf-8">
     <table style="border-collapse:collapse;font-family:Segoe UI,sans-serif">
       <thead><tr>${headerHtml}</tr></thead>
@@ -522,34 +702,178 @@ document.getElementById('btn-copy-cpm').addEventListener('click', () => {
     const mark = n.slack === 0 ? ' ★' : '';
     return [n.num + mark, n.name, n.duration, pred, n.ES, n.EF, n.LS, n.LF, n.slack].join('\t');
   }).join('\n');
-  const plainText = `${headerTxt}\n${rowsTxt}\n\nDuración total: ${projectEnd}`;
+  let plainText = `${headerTxt}\n${rowsTxt}\n\nDuración total: ${projectEnd}`;
+
+  // ── Si el procedimiento está activo, agregarlo ──
+  if (showProc) {
+    const procLines = [];
+    procLines.push('\n\n══════════════════════════════════════');
+    procLines.push('PROCEDIMIENTO MATEMÁTICO CPM');
+    procLines.push('══════════════════════════════════════');
+
+    // Paso 1: Pase hacia adelante
+    procLines.push('\n── PASO 1: Pase hacia adelante (IC y TC) ──');
+    procLines.push('Fórmulas: IC = máx(TC de predecesores)  |  TC = IC + Duración');
+    sorted.forEach(num => {
+      const n = map[num];
+      const mark = n.slack === 0 ? ' ★' : '';
+      if (n.predecessors.length === 0) {
+        procLines.push(`  #${n.num} ${n.name}${mark}: IC = 0 (inicio)  →  TC = 0 + ${n.duration} = ${n.EF}`);
+      } else {
+        const predVals = n.predecessors.map(p => `TC(${p})=${map[p] ? map[p].EF : '?'}`).join(', ');
+        const maxFn = n.predecessors.length > 1 ? `máx(${predVals})` : predVals;
+        procLines.push(`  #${n.num} ${n.name}${mark}: IC = ${maxFn} = ${n.ES}  →  TC = ${n.ES} + ${n.duration} = ${n.EF}`);
+      }
+    });
+
+    // Paso 2: Pase hacia atrás
+    procLines.push('\n── PASO 2: Pase hacia atrás (IT y TT) ──');
+    procLines.push('Fórmulas: TT = mín(IT de sucesores)  |  IT = TT − Duración');
+    [...sorted].reverse().forEach(num => {
+      const n = map[num];
+      const mark = n.slack === 0 ? ' ★' : '';
+      const successors = Object.values(map).filter(s => s.predecessors.includes(num));
+      if (successors.length === 0) {
+        procLines.push(`  #${n.num} ${n.name}${mark}: TT = ${projectEnd} (fin)  →  IT = ${n.LF} − ${n.duration} = ${n.LS}`);
+      } else {
+        const sucVals = successors.map(s => `IT(${s.num})=${s.LS}`).join(', ');
+        const minFn = successors.length > 1 ? `mín(${sucVals})` : sucVals;
+        procLines.push(`  #${n.num} ${n.name}${mark}: TT = ${minFn} = ${n.LF}  →  IT = ${n.LF} − ${n.duration} = ${n.LS}`);
+      }
+    });
+
+    // Paso 3: Holguras
+    procLines.push('\n── PASO 3: Cálculo de holguras ──');
+    procLines.push('Fórmula: Holgura = TT − TC');
+    sorted.forEach(num => {
+      const n = map[num];
+      const mark = n.slack === 0 ? ' ★ CRÍTICA' : '';
+      procLines.push(`  #${n.num} ${n.name}: Holgura = ${n.LF} − ${n.EF} = ${n.slack}${mark}`);
+    });
+
+    // Paso 4: Ruta crítica
+    const critNodes = sorted.filter(num => map[num].slack === 0);
+    const critPath = critNodes.map(num => `#${num} ${map[num].name}`).join(' → ');
+    procLines.push('\n── PASO 4: Ruta crítica (Holgura = 0) ──');
+    procLines.push(`  ${critPath}`);
+    procLines.push(`  Duración total: ${projectEnd}`);
+
+    plainText += procLines.join('\n');
+
+    // HTML del procedimiento
+    const procHtml = buildProcedureHtml(map, sorted, projectEnd);
+    tableHtml += procHtml;
+  }
 
   const btn = document.getElementById('btn-copy-cpm');
 
-  // Intentar copiar con HTML (soportado en Chrome/Edge)
   if (window.ClipboardItem) {
     const htmlBlob  = new Blob([tableHtml], { type: 'text/html' });
     const plainBlob = new Blob([plainText], { type: 'text/plain' });
     navigator.clipboard.write([new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': plainBlob })])
       .then(() => {
         btn.innerHTML = '<span class="io-icon">✓</span> ¡Copiado!';
-        setTimeout(() => { btn.innerHTML = '<span class="io-icon">⎘</span> Copiar tabla'; }, 2000);
+        setTimeout(() => { btn.innerHTML = '<span class="io-icon">⎘</span> Copiar'; }, 2000);
       })
       .catch(() => {
-        // Fallback: solo texto plano
         navigator.clipboard.writeText(plainText).then(() => {
           btn.innerHTML = '<span class="io-icon">✓</span> ¡Copiado!';
-          setTimeout(() => { btn.innerHTML = '<span class="io-icon">⎘</span> Copiar tabla'; }, 2000);
+          setTimeout(() => { btn.innerHTML = '<span class="io-icon">⎘</span> Copiar'; }, 2000);
         });
       });
   } else {
-    // Firefox fallback
     navigator.clipboard.writeText(plainText).then(() => {
       btn.innerHTML = '<span class="io-icon">✓</span> ¡Copiado!';
-      setTimeout(() => { btn.innerHTML = '<span class="io-icon">⎘</span> Copiar tabla'; }, 2000);
+      setTimeout(() => { btn.innerHTML = '<span class="io-icon">⎘</span> Copiar'; }, 2000);
     });
   }
 });
+
+// ─── HTML del procedimiento para copiar ─────────────────────────
+function buildProcedureHtml(map, sorted, projectEnd) {
+  const s = (color, text) => `<span style="color:${color};font-weight:700">${text}</span>`;
+  const muted = '#7a82a6';
+  const base  = 'font-family:Consolas,monospace;font-size:11px;line-height:1.8;';
+
+  const sectionStyle = 'border-collapse:collapse;width:100%;margin-top:16px;font-family:Segoe UI,sans-serif;';
+  const titleStyle   = (color) => `background:#1a1d27;color:${color};padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-left:3px solid ${color};border-bottom:1px solid #2e3350;`;
+  const stepStyle    = (crit) => `padding:8px 12px;border-bottom:1px solid #2e3350;background:${crit ? '#ff9f4308' : '#0f1117'};`;
+  const formulaStyle = `${base}background:#1a1d27;padding:5px 10px;border-radius:4px;border-left:2px solid #2e3350;display:block;margin-top:4px;`;
+
+  let html = `<br><table style="${sectionStyle}">`;
+
+  // Paso 1
+  html += `<tr><td style="${titleStyle('#60a5fa')}">→ Paso 1 — Pase hacia adelante (IC y TC)</td></tr>`;
+  sorted.forEach(num => {
+    const n = map[num];
+    const isCrit = n.slack === 0;
+    let formula = '';
+    if (n.predecessors.length === 0) {
+      formula = `${s('#60a5fa','IC')} = ${s('#e2e8f0','0')} (sin predecesores)  →  ${s('#34d399','TC')} = ${s('#60a5fa',n.ES)} + ${s('#e2e8f0',n.duration)} = ${s('#34d399',n.EF)}`;
+    } else {
+      const predVals = n.predecessors.map(p => `TC(${p})=${s('#34d399', map[p] ? map[p].EF : '?')}`).join(', ');
+      const maxFn = n.predecessors.length > 1 ? `máx(${predVals})` : predVals;
+      formula = `${s('#60a5fa','IC')} = ${maxFn} = ${s('#60a5fa',n.ES)}  →  ${s('#34d399','TC')} = ${s('#60a5fa',n.ES)} + ${s('#e2e8f0',n.duration)} = ${s('#34d399',n.EF)}`;
+    }
+    html += `<tr><td style="${stepStyle(isCrit)}">
+      <span style="color:${isCrit ? '#ff9f43' : '#6c63ff'};font-weight:800;font-size:11px">#${n.num}</span>
+      <span style="color:#e2e8f0;font-weight:600;font-size:12px;margin-left:6px">${n.name}</span>
+      <span style="${formulaStyle}">${formula}</span>
+    </td></tr>`;
+  });
+
+  // Paso 2
+  html += `<tr><td style="${titleStyle('#f472b6')}">← Paso 2 — Pase hacia atrás (IT y TT)</td></tr>`;
+  [...sorted].reverse().forEach(num => {
+    const n = map[num];
+    const isCrit = n.slack === 0;
+    const successors = Object.values(map).filter(s => s.predecessors.includes(num));
+    let formula = '';
+    if (successors.length === 0) {
+      formula = `${s('#fb923c','TT')} = ${s('#e2e8f0',projectEnd)} (fin del proyecto)  →  ${s('#f472b6','IT')} = ${s('#fb923c',n.LF)} − ${s('#e2e8f0',n.duration)} = ${s('#f472b6',n.LS)}`;
+    } else {
+      const sucVals = successors.map(sv => `IT(${sv.num})=${s('#f472b6', sv.LS)}`).join(', ');
+      const minFn = successors.length > 1 ? `mín(${sucVals})` : sucVals;
+      formula = `${s('#fb923c','TT')} = ${minFn} = ${s('#fb923c',n.LF)}  →  ${s('#f472b6','IT')} = ${s('#fb923c',n.LF)} − ${s('#e2e8f0',n.duration)} = ${s('#f472b6',n.LS)}`;
+    }
+    html += `<tr><td style="${stepStyle(isCrit)}">
+      <span style="color:${isCrit ? '#ff9f43' : '#6c63ff'};font-weight:800;font-size:11px">#${n.num}</span>
+      <span style="color:#e2e8f0;font-weight:600;font-size:12px;margin-left:6px">${n.name}</span>
+      <span style="${formulaStyle}">${formula}</span>
+    </td></tr>`;
+  });
+
+  // Paso 3
+  html += `<tr><td style="${titleStyle('#22d3a5')}">⊘ Paso 3 — Cálculo de holguras</td></tr>`;
+  sorted.forEach(num => {
+    const n = map[num];
+    const isCrit = n.slack === 0;
+    const slackColor = isCrit ? '#ff9f43' : '#22d3a5';
+    const critLabel  = isCrit ? `  ${s('#ff9f43','★ Ruta crítica')}` : '';
+    const formula = `${s('#22d3a5','Holgura')} = ${s('#fb923c','TT')} − ${s('#34d399','TC')} = ${s('#fb923c',n.LF)} − ${s('#34d399',n.EF)} = ${s(slackColor,n.slack)}${critLabel}`;
+    html += `<tr><td style="${stepStyle(isCrit)}">
+      <span style="color:${isCrit ? '#ff9f43' : '#6c63ff'};font-weight:800;font-size:11px">#${n.num}</span>
+      <span style="color:#e2e8f0;font-weight:600;font-size:12px;margin-left:6px">${n.name}</span>
+      <span style="${formulaStyle}">${formula}</span>
+    </td></tr>`;
+  });
+
+  // Paso 4
+  const critNodes = sorted.filter(num => map[num].slack === 0);
+  const critPath  = critNodes.map(num =>
+    `<span style="background:#ff9f4318;border:1px solid #ff9f4344;color:#ff9f43;font-weight:700;padding:1px 7px;border-radius:4px;font-size:11px">#${num} ${map[num].name}</span>`
+  ).join(' <span style="color:#ff9f43;font-weight:700">→</span> ');
+  html += `<tr><td style="${titleStyle('#ff9f43')}">★ Paso 4 — Ruta crítica (Holgura = 0)</td></tr>`;
+  html += `<tr><td style="padding:10px 12px;background:#0f1117;font-size:12px">
+    ${critPath}
+    <br><span style="color:#7a82a6;font-size:11px;margin-top:6px;display:inline-block">
+      Duración total: <strong style="color:#ff9f43">${projectEnd}</strong>
+    </span>
+  </td></tr>`;
+
+  html += '</table>';
+  return html;
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  DIAGRAMA AON  (Activity on Node)

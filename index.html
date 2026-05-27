@@ -10,6 +10,7 @@
 
   <header>
     <div class="header-inner">
+      <button id="btn-collapse-panel" class="btn btn-icon btn-hamburger" title="Plegar / expandir panel">☰</button>
       <div class="logo">
         <span class="logo-icon">◈</span>
         <span class="logo-text">PERT <span class="accent">/ CPM</span></span>
@@ -31,48 +32,72 @@
 
       <div class="panel-header">
         <h2>Actividades</h2>
-        <button id="btn-add" class="btn btn-primary">+ Agregar</button>
+        <div class="panel-header-actions">
+          <button id="btn-add" class="btn btn-primary">+ Agregar</button>
+          <button id="btn-collapse-activities" class="btn btn-icon btn-collapse-acts" title="Colapsar actividades">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="12" height="5" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="1" y="8" width="12" height="5" rx="1.5" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
+              <line x1="4" y1="11.5" x2="10" y2="11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <div class="table-wrapper">
-        <table id="activity-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Nombre</th>
-              <th>Dur.</th>
-              <th>Predecesores</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="activity-body"></tbody>
-        </table>
-      </div>
+      <!-- Zona colapsable: tabla + acciones + io -->
+      <div id="activities-section" class="activities-section">
+        <div class="table-wrapper">
+          <table id="activity-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nombre</th>
+                <th>Dur.</th>
+                <th>Predecesores</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="activity-body"></tbody>
+          </table>
+        </div>
 
-      <div class="panel-actions">
-        <button id="btn-generate" class="btn btn-success">Generar Diagrama</button>
-        <button id="btn-clear"    class="btn btn-ghost">Limpiar todo</button>
-      </div>
+        <div class="panel-actions">
+          <button id="btn-generate" class="btn btn-success">Generar Diagrama</button>
+          <button id="btn-clear"    class="btn btn-ghost">Limpiar todo</button>
+        </div>
 
-      <!-- Exportar / Importar -->
-      <div class="panel-io">
-        <button id="btn-export" class="btn btn-io" title="Exportar actividades como texto">
-          <span class="io-icon">↑</span> Exportar
-        </button>
-        <button id="btn-import" class="btn btn-io" title="Importar actividades desde texto">
-          <span class="io-icon">↓</span> Importar
-        </button>
+        <!-- Exportar / Importar -->
+        <div class="panel-io">
+          <button id="btn-export" class="btn btn-io" title="Exportar actividades como texto">
+            <span class="io-icon">↑</span> Exportar
+          </button>
+          <button id="btn-import" class="btn btn-io" title="Importar actividades desde texto">
+            <span class="io-icon">↓</span> Importar
+          </button>
+        </div>
       </div>
 
       <!-- Resultados CPM -->
       <div id="cpm-results" class="cpm-results hidden">
         <div class="cpm-results-header">
           <h3>Análisis CPM</h3>
-          <button id="btn-copy-cpm" class="btn btn-io btn-copy-cpm" title="Copiar tabla como texto">
-            <span class="io-icon">⎘</span> Copiar tabla
-          </button>
+          <div class="cpm-header-actions">
+            <!-- Toggle procedimiento -->
+            <label class="toggle-switch" title="Mostrar procedimiento matemático">
+              <input type="checkbox" id="toggle-procedure" />
+              <span class="toggle-track">
+                <span class="toggle-thumb"></span>
+              </span>
+              <span class="toggle-label">Procedimiento</span>
+            </label>
+            <button id="btn-copy-cpm" class="btn btn-io btn-copy-cpm" title="Copiar tabla como texto">
+              <span class="io-icon">⎘</span> Copiar
+            </button>
+          </div>
         </div>
         <div id="cpm-table-wrapper"></div>
+        <!-- Sección de procedimiento matemático -->
+        <div id="cpm-procedure" class="cpm-procedure hidden"></div>
         <div class="critical-path-label">
           <span class="dot critical"></span>
           Ruta crítica — Duración total: <strong id="total-duration">0</strong>
