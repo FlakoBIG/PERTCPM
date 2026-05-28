@@ -925,10 +925,10 @@ function copyAllProcedure() {
   const tStyle = 'border-collapse:collapse;width:100%;font-family:Segoe UI,sans-serif;';
   const hStyle = c => `background:#1a1d27;color:${c};padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-left:3px solid ${c};border-bottom:1px solid #2e3350;`;
   const rStyle = crit => `padding:7px 12px;border-bottom:1px solid #2e3350;background:${crit ? '#ff9f4308' : '#0f1117'};`;
-  const fStyle = `${base}background:#1a1d27;padding:4px 8px;border-radius:4px;border-left:2px solid #2e3350;display:block;margin-top:3px;`;
+  const fStyle = `${base}background:#1a1d27;padding:4px 8px;border-radius:4px;border-left:2px solid #2e3350;display:inline;margin-left:4px;`;
 
   const badge = (n) => `<span style="color:${n.slack===0?'#ff9f43':'#6c63ff'};font-weight:800;font-size:11px">#${n.num}</span>
-    <span style="color:#e2e8f0;font-weight:600;font-size:12px;margin-left:6px">${n.name}</span>`;
+    <span style="color:#e2e8f0;font-weight:600;font-size:12px;margin-left:6px">${n.name}:</span>`;
 
   let html = `<meta charset="utf-8"><table style="${tStyle}">`;
 
