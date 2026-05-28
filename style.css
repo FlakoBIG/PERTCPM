@@ -578,6 +578,19 @@ tbody td {
   flex-shrink: 0;
 }
 
+/* Barra entre tabla CPM y procedimiento */
+.proc-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
 .btn-copy-cpm {
   flex: none !important;
   font-size: .72rem;
@@ -678,6 +691,28 @@ tbody td {
 .proc-section-title.backward { color: #f472b6; border-left: 3px solid #f472b6; }
 .proc-section-title.slack    { color: var(--success); border-left: 3px solid var(--success); }
 .proc-section-title.critical { color: var(--critical); border-left: 3px solid var(--critical); }
+
+/* Botón copiar dentro del título de cada paso */
+.btn-copy-step {
+  margin-left: auto;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: inherit;
+  opacity: .55;
+  cursor: pointer;
+  font-size: .8rem;
+  padding: 2px 7px;
+  line-height: 1;
+  transition: opacity var(--transition), background var(--transition), border-color var(--transition);
+  flex-shrink: 0;
+}
+
+.btn-copy-step:hover {
+  opacity: 1;
+  background: #ffffff18;
+  border-color: currentColor;
+}
 
 .proc-steps {
   padding: 10px 12px;

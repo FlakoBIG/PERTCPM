@@ -145,26 +145,31 @@
         <div class="cpm-results-header">
           <h3>Análisis CPM</h3>
           <div class="cpm-header-actions">
-            <!-- Toggle procedimiento -->
-            <label class="toggle-switch" title="Mostrar procedimiento matemático">
-              <input type="checkbox" id="toggle-procedure" />
-              <span class="toggle-track">
-                <span class="toggle-thumb"></span>
-              </span>
-              <span class="toggle-label">Procedimiento</span>
-            </label>
-            <button id="btn-copy-cpm" class="btn btn-io btn-copy-cpm" title="Copiar tabla como texto">
-              <span class="io-icon">⎘</span> Copiar
+            <button id="btn-copy-cpm" class="btn btn-io btn-copy-cpm" title="Copiar tabla CPM">
+              <span class="io-icon">⎘</span> Tabla
             </button>
           </div>
         </div>
         <div id="cpm-table-wrapper"></div>
-        <!-- Sección de procedimiento matemático -->
-        <div id="cpm-procedure" class="cpm-procedure hidden"></div>
         <div class="critical-path-label">
           <span class="dot critical"></span>
           Ruta crítica — Duración total: <strong id="total-duration">0</strong>
         </div>
+        <!-- Barra separadora: toggle + copiar procedimiento -->
+        <div class="proc-toolbar">
+          <label class="toggle-switch" title="Mostrar procedimiento matemático">
+            <input type="checkbox" id="toggle-procedure" />
+            <span class="toggle-track">
+              <span class="toggle-thumb"></span>
+            </span>
+            <span class="toggle-label">Procedimiento</span>
+          </label>
+          <button id="btn-copy-proc" class="btn btn-io btn-copy-cpm" title="Copiar procedimiento completo">
+            <span class="io-icon">⎘</span> Procedimiento
+          </button>
+        </div>
+        <!-- Sección de procedimiento matemático -->
+        <div id="cpm-procedure" class="cpm-procedure hidden"></div>
       </div>
     </aside>
 

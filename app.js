@@ -824,21 +824,29 @@ function renderCPMProcedure({ map, sorted, projectEnd }) {
 
   cpmProcedure.innerHTML = `
     <div class="proc-section">
-      <div class="proc-section-title forward"><span class="proc-icon">→</span> Paso 1 — Pase hacia adelante (IC y TC)</div>
-      <div class="proc-steps">${forwardSteps}</div>
+      <div class="proc-section-title forward">
+        <span class="proc-icon">→</span> Paso 1 — Pase hacia adelante (IC y TC)
+      </div>
+      <div class="proc-steps" id="proc-steps-1">${forwardSteps}</div>
       ${legend}
     </div>
     <div class="proc-section">
-      <div class="proc-section-title backward"><span class="proc-icon">←</span> Paso 2 — Pase hacia atrás (IT y TT)</div>
-      <div class="proc-steps">${backwardSteps}</div>
+      <div class="proc-section-title backward">
+        <span class="proc-icon">←</span> Paso 2 — Pase hacia atrás (IT y TT)
+      </div>
+      <div class="proc-steps" id="proc-steps-2">${backwardSteps}</div>
     </div>
     <div class="proc-section">
-      <div class="proc-section-title slack"><span class="proc-icon">⊘</span> Paso 3 — Cálculo de holguras</div>
-      <div class="proc-steps">${slackSteps}</div>
+      <div class="proc-section-title slack">
+        <span class="proc-icon">⊘</span> Paso 3 — Cálculo de holguras
+      </div>
+      <div class="proc-steps" id="proc-steps-3">${slackSteps}</div>
     </div>
     <div class="proc-section">
-      <div class="proc-section-title critical"><span class="proc-icon">★</span> Paso 4 — Ruta crítica (Holgura = 0)</div>
-      <div class="proc-critical-list">
+      <div class="proc-section-title critical">
+        <span class="proc-icon">★</span> Paso 4 — Ruta crítica (Holgura = 0)
+      </div>
+      <div class="proc-critical-list" id="proc-steps-4">
         ${critPath}<br>
         <span style="font-size:.72rem;margin-top:6px;display:inline-block">
           Duración total del proyecto: <strong style="color:var(--critical)">${projectEnd}</strong>
@@ -847,13 +855,158 @@ function renderCPMProcedure({ map, sorted, projectEnd }) {
     </div>`;
 }
 
+// ─── Copiar procedimiento completo ──────────────────────────────
+document.getElementById('btn-copy-proc').addEventListener('click', () => {
+  if (!lastCPM) return;
+  copyAllProcedure();
+});
+
+function copyAllProcedure() {
+  const { map, sorted, projectEnd } = lastCPM;
+  const btn = document.getElementById('btn-copy-proc');
+
+  // ── Texto plano ──
+  const lines = [];
+  lines.push('══════════════════════════════════════════');
+  lines.push('  PROCEDIMIENTO MATEMÁTICO CPM');
+  lines.push('══════════════════════════════════════════');
+
+  // Paso 1
+  lines.push('\n── Paso 1: Pase hacia adelante (IC y TC) ──');
+  lines.push('Fórmulas: IC = máx(TC de predecesores)  |  TC = IC + Duración');
+  sorted.forEach(num => {
+    const n = map[num];
+    const mark = n.slack === 0 ? ' ★' : '';
+    if (n.predecessors.length === 0) {
+      lines.push(`  #${n.num} ${n.name}${mark}: IC = 0 (inicio)  →  TC = 0 + ${n.duration} = ${n.EF}`);
+    } else {
+      const predVals = n.predecessors.map(p => `TC(${p})=${map[p]?.EF ?? '?'}`).join(', ');
+      const maxFn = n.predecessors.length > 1 ? `máx(${predVals})` : predVals;
+      lines.push(`  #${n.num} ${n.name}${mark}: IC = ${maxFn} = ${n.ES}  →  TC = ${n.ES} + ${n.duration} = ${n.EF}`);
+    }
+  });
+
+  // Paso 2
+  lines.push('\n── Paso 2: Pase hacia atrás (IT y TT) ──');
+  lines.push('Fórmulas: TT = mín(IT de sucesores)  |  IT = TT − Duración');
+  [...sorted].reverse().forEach(num => {
+    const n = map[num];
+    const mark = n.slack === 0 ? ' ★' : '';
+    const successors = Object.values(map).filter(s => s.predecessors.includes(num));
+    if (successors.length === 0) {
+      lines.push(`  #${n.num} ${n.name}${mark}: TT = ${projectEnd} (fin)  →  IT = ${n.LF} − ${n.duration} = ${n.LS}`);
+    } else {
+      const sucVals = successors.map(s => `IT(${s.num})=${s.LS}`).join(', ');
+      const minFn = successors.length > 1 ? `mín(${sucVals})` : sucVals;
+      lines.push(`  #${n.num} ${n.name}${mark}: TT = ${minFn} = ${n.LF}  →  IT = ${n.LF} − ${n.duration} = ${n.LS}`);
+    }
+  });
+
+  // Paso 3
+  lines.push('\n── Paso 3: Cálculo de holguras ──');
+  lines.push('Fórmula: Holgura = TT − TC');
+  sorted.forEach(num => {
+    const n = map[num];
+    const mark = n.slack === 0 ? ' ★ CRÍTICA' : '';
+    lines.push(`  #${n.num} ${n.name}: Holgura = ${n.LF} − ${n.EF} = ${n.slack}${mark}`);
+  });
+
+  // Paso 4
+  lines.push('\n── Paso 4: Ruta crítica (Holgura = 0) ──');
+  const critNodes = sorted.filter(num => map[num].slack === 0);
+  lines.push('  ' + critNodes.map(num => `#${num} ${map[num].name}`).join(' → '));
+  lines.push(`  Duración total del proyecto: ${projectEnd}`);
+
+  const plainText = lines.join('\n');
+
+  // ── HTML enriquecido ──
+  const s = (color, text) => `<span style="color:${color};font-weight:700">${text}</span>`;
+  const base = 'font-family:Consolas,monospace;font-size:11px;line-height:1.8;';
+  const tStyle = 'border-collapse:collapse;width:100%;font-family:Segoe UI,sans-serif;';
+  const hStyle = c => `background:#1a1d27;color:${c};padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-left:3px solid ${c};border-bottom:1px solid #2e3350;`;
+  const rStyle = crit => `padding:7px 12px;border-bottom:1px solid #2e3350;background:${crit ? '#ff9f4308' : '#0f1117'};`;
+  const fStyle = `${base}background:#1a1d27;padding:4px 8px;border-radius:4px;border-left:2px solid #2e3350;display:block;margin-top:3px;`;
+
+  const badge = (n) => `<span style="color:${n.slack===0?'#ff9f43':'#6c63ff'};font-weight:800;font-size:11px">#${n.num}</span>
+    <span style="color:#e2e8f0;font-weight:600;font-size:12px;margin-left:6px">${n.name}</span>`;
+
+  let html = `<meta charset="utf-8"><table style="${tStyle}">`;
+
+  // Paso 1
+  html += `<tr><td style="${hStyle('#60a5fa')}">→ Paso 1 — Pase hacia adelante (IC y TC)</td></tr>`;
+  sorted.forEach(num => {
+    const n = map[num];
+    let f = '';
+    if (n.predecessors.length === 0) {
+      f = `${s('#60a5fa','IC')} = ${s('#e2e8f0','0')} (sin predecesores) → ${s('#34d399','TC')} = ${s('#60a5fa',n.ES)} + ${s('#e2e8f0',n.duration)} = ${s('#34d399',n.EF)}`;
+    } else {
+      const pv = n.predecessors.map(p => `TC(${p})=${s('#34d399', map[p]?.EF ?? '?')}`).join(', ');
+      f = `${s('#60a5fa','IC')} = ${n.predecessors.length>1?`máx(${pv})`:pv} = ${s('#60a5fa',n.ES)} → ${s('#34d399','TC')} = ${s('#60a5fa',n.ES)} + ${s('#e2e8f0',n.duration)} = ${s('#34d399',n.EF)}`;
+    }
+    html += `<tr><td style="${rStyle(n.slack===0)}">${badge(n)}<span style="${fStyle}">${f}</span></td></tr>`;
+  });
+
+  // Paso 2
+  html += `<tr><td style="${hStyle('#f472b6')}">← Paso 2 — Pase hacia atrás (IT y TT)</td></tr>`;
+  [...sorted].reverse().forEach(num => {
+    const n = map[num];
+    const sucs = Object.values(map).filter(sv => sv.predecessors.includes(num));
+    let f = '';
+    if (sucs.length === 0) {
+      f = `${s('#fb923c','TT')} = ${s('#e2e8f0',projectEnd)} (fin) → ${s('#f472b6','IT')} = ${s('#fb923c',n.LF)} − ${s('#e2e8f0',n.duration)} = ${s('#f472b6',n.LS)}`;
+    } else {
+      const sv = sucs.map(x => `IT(${x.num})=${s('#f472b6',x.LS)}`).join(', ');
+      f = `${s('#fb923c','TT')} = ${sucs.length>1?`mín(${sv})`:sv} = ${s('#fb923c',n.LF)} → ${s('#f472b6','IT')} = ${s('#fb923c',n.LF)} − ${s('#e2e8f0',n.duration)} = ${s('#f472b6',n.LS)}`;
+    }
+    html += `<tr><td style="${rStyle(n.slack===0)}">${badge(n)}<span style="${fStyle}">${f}</span></td></tr>`;
+  });
+
+  // Paso 3
+  html += `<tr><td style="${hStyle('#22d3a5')}">⊘ Paso 3 — Cálculo de holguras</td></tr>`;
+  sorted.forEach(num => {
+    const n = map[num];
+    const sc = n.slack===0 ? '#ff9f43' : '#22d3a5';
+    const cl = n.slack===0 ? `  ${s('#ff9f43','★ Ruta crítica')}` : '';
+    const f = `${s('#22d3a5','Holgura')} = ${s('#fb923c','TT')} − ${s('#34d399','TC')} = ${s('#fb923c',n.LF)} − ${s('#34d399',n.EF)} = ${s(sc,n.slack)}${cl}`;
+    html += `<tr><td style="${rStyle(n.slack===0)}">${badge(n)}<span style="${fStyle}">${f}</span></td></tr>`;
+  });
+
+  // Paso 4
+  const crits = sorted.filter(num => map[num].slack === 0);
+  const critPathHtml = crits.map(num =>
+    `<span style="background:#ff9f4318;border:1px solid #ff9f4344;color:#ff9f43;font-weight:700;padding:1px 7px;border-radius:4px;font-size:11px">#${num} ${map[num].name}</span>`
+  ).join(' <span style="color:#ff9f43;font-weight:700">→</span> ');
+  html += `<tr><td style="${hStyle('#ff9f43')}">★ Paso 4 — Ruta crítica (Holgura = 0)</td></tr>`;
+  html += `<tr><td style="padding:10px 12px;background:#0f1117;font-size:12px">${critPathHtml}<br>
+    <span style="color:#7a82a6;font-size:11px;margin-top:6px;display:inline-block">
+      Duración total: <strong style="color:#ff9f43">${projectEnd}</strong>
+    </span></td></tr>`;
+  html += '</table>';
+
+  if (window.ClipboardItem) {
+    navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([html],      { type: 'text/html' }),
+      'text/plain': new Blob([plainText], { type: 'text/plain' })
+    })]).then(() => flash(btn, 'Procedimiento')).catch(() => navigator.clipboard.writeText(plainText).then(() => flash(btn, 'Procedimiento')));
+  } else {
+    navigator.clipboard.writeText(plainText).then(() => flash(btn, 'Procedimiento'));
+  }
+}
+
+function flash(btn, label) {
+  const orig = label
+    ? `<span class="io-icon">⎘</span> ${label}`
+    : btn.innerHTML;
+  btn.innerHTML = '<span class="io-icon">✓</span> ¡Copiado!';
+  setTimeout(() => { btn.innerHTML = orig; }, 2000);
+}
+
 // ─── Copiar tabla CPM ────────────────────────────────────────────
 document.getElementById('btn-copy-cpm').addEventListener('click', () => {
   if (!lastCPM) return;
-  const { map, projectEnd, sorted } = lastCPM;
-  const showProc = toggleProcedure.checked;
+  const { map, projectEnd } = lastCPM;
 
-  // ── HTML para Word / Google Docs (se pega como tabla) ──
+  // ── HTML para Word / Google Docs ──
   const headerHtml = ['#', 'Nombre', 'Duración', 'Predecesores', 'IC', 'TC', 'IT', 'TT', 'Holgura']
     .map(h => `<th style="background:#1a1d27;color:#e2e8f0;padding:6px 10px;border:1px solid #2e3350;font-size:12px">${h}</th>`)
     .join('');
@@ -869,7 +1022,7 @@ document.getElementById('btn-copy-cpm').addEventListener('click', () => {
     return `<tr style="background:${bg}">${cells}</tr>`;
   }).join('');
 
-  let tableHtml = `
+  const tableHtml = `
     <meta charset="utf-8">
     <table style="border-collapse:collapse;font-family:Segoe UI,sans-serif">
       <thead><tr>${headerHtml}</tr></thead>
@@ -880,185 +1033,28 @@ document.getElementById('btn-copy-cpm').addEventListener('click', () => {
       &nbsp;|&nbsp; ★ = Ruta crítica
     </p>`;
 
-  // ── Texto plano con tabs (fallback) ──
+  // ── Texto plano con tabs ──
   const headerTxt = ['#', 'Nombre', 'Duración', 'Predecesores', 'IC', 'TC', 'IT', 'TT', 'Holgura'].join('\t');
   const rowsTxt   = Object.values(map).map(n => {
     const pred = n.predecessors.length ? n.predecessors.join(', ') : '—';
     const mark = n.slack === 0 ? ' ★' : '';
     return [n.num + mark, n.name, n.duration, pred, n.ES, n.EF, n.LS, n.LF, n.slack].join('\t');
   }).join('\n');
-  let plainText = `${headerTxt}\n${rowsTxt}\n\nDuración total: ${projectEnd}`;
-
-  // ── Si el procedimiento está activo, agregarlo ──
-  if (showProc) {
-    const procLines = [];
-    procLines.push('\n\n══════════════════════════════════════');
-    procLines.push('PROCEDIMIENTO MATEMÁTICO CPM');
-    procLines.push('══════════════════════════════════════');
-
-    // Paso 1: Pase hacia adelante
-    procLines.push('\n── PASO 1: Pase hacia adelante (IC y TC) ──');
-    procLines.push('Fórmulas: IC = máx(TC de predecesores)  |  TC = IC + Duración');
-    sorted.forEach(num => {
-      const n = map[num];
-      const mark = n.slack === 0 ? ' ★' : '';
-      if (n.predecessors.length === 0) {
-        procLines.push(`  #${n.num} ${n.name}${mark}: IC = 0 (inicio)  →  TC = 0 + ${n.duration} = ${n.EF}`);
-      } else {
-        const predVals = n.predecessors.map(p => `TC(${p})=${map[p] ? map[p].EF : '?'}`).join(', ');
-        const maxFn = n.predecessors.length > 1 ? `máx(${predVals})` : predVals;
-        procLines.push(`  #${n.num} ${n.name}${mark}: IC = ${maxFn} = ${n.ES}  →  TC = ${n.ES} + ${n.duration} = ${n.EF}`);
-      }
-    });
-
-    // Paso 2: Pase hacia atrás
-    procLines.push('\n── PASO 2: Pase hacia atrás (IT y TT) ──');
-    procLines.push('Fórmulas: TT = mín(IT de sucesores)  |  IT = TT − Duración');
-    [...sorted].reverse().forEach(num => {
-      const n = map[num];
-      const mark = n.slack === 0 ? ' ★' : '';
-      const successors = Object.values(map).filter(s => s.predecessors.includes(num));
-      if (successors.length === 0) {
-        procLines.push(`  #${n.num} ${n.name}${mark}: TT = ${projectEnd} (fin)  →  IT = ${n.LF} − ${n.duration} = ${n.LS}`);
-      } else {
-        const sucVals = successors.map(s => `IT(${s.num})=${s.LS}`).join(', ');
-        const minFn = successors.length > 1 ? `mín(${sucVals})` : sucVals;
-        procLines.push(`  #${n.num} ${n.name}${mark}: TT = ${minFn} = ${n.LF}  →  IT = ${n.LF} − ${n.duration} = ${n.LS}`);
-      }
-    });
-
-    // Paso 3: Holguras
-    procLines.push('\n── PASO 3: Cálculo de holguras ──');
-    procLines.push('Fórmula: Holgura = TT − TC');
-    sorted.forEach(num => {
-      const n = map[num];
-      const mark = n.slack === 0 ? ' ★ CRÍTICA' : '';
-      procLines.push(`  #${n.num} ${n.name}: Holgura = ${n.LF} − ${n.EF} = ${n.slack}${mark}`);
-    });
-
-    // Paso 4: Ruta crítica
-    const critNodes = sorted.filter(num => map[num].slack === 0);
-    const critPath = critNodes.map(num => `#${num} ${map[num].name}`).join(' → ');
-    procLines.push('\n── PASO 4: Ruta crítica (Holgura = 0) ──');
-    procLines.push(`  ${critPath}`);
-    procLines.push(`  Duración total: ${projectEnd}`);
-
-    plainText += procLines.join('\n');
-
-    // HTML del procedimiento
-    const procHtml = buildProcedureHtml(map, sorted, projectEnd);
-    tableHtml += procHtml;
-  }
+  const plainText = `${headerTxt}\n${rowsTxt}\n\nDuración total: ${projectEnd}`;
 
   const btn = document.getElementById('btn-copy-cpm');
 
   if (window.ClipboardItem) {
-    const htmlBlob  = new Blob([tableHtml], { type: 'text/html' });
-    const plainBlob = new Blob([plainText], { type: 'text/plain' });
-    navigator.clipboard.write([new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': plainBlob })])
-      .then(() => {
-        btn.innerHTML = '<span class="io-icon">✓</span> ¡Copiado!';
-        setTimeout(() => { btn.innerHTML = '<span class="io-icon">⎘</span> Copiar'; }, 2000);
-      })
-      .catch(() => {
-        navigator.clipboard.writeText(plainText).then(() => {
-          btn.innerHTML = '<span class="io-icon">✓</span> ¡Copiado!';
-          setTimeout(() => { btn.innerHTML = '<span class="io-icon">⎘</span> Copiar'; }, 2000);
-        });
-      });
-  } else {
-    navigator.clipboard.writeText(plainText).then(() => {
-      btn.innerHTML = '<span class="io-icon">✓</span> ¡Copiado!';
-      setTimeout(() => { btn.innerHTML = '<span class="io-icon">⎘</span> Copiar'; }, 2000);
+    navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([tableHtml], { type: 'text/html' }),
+      'text/plain': new Blob([plainText], { type: 'text/plain' })
+    })]).then(() => flash(btn, 'Tabla')).catch(() => {
+      navigator.clipboard.writeText(plainText).then(() => flash(btn, 'Tabla'));
     });
+  } else {
+    navigator.clipboard.writeText(plainText).then(() => flash(btn, 'Tabla'));
   }
 });
-
-// ─── HTML del procedimiento para copiar ─────────────────────────
-function buildProcedureHtml(map, sorted, projectEnd) {
-  const s = (color, text) => `<span style="color:${color};font-weight:700">${text}</span>`;
-  const muted = '#7a82a6';
-  const base  = 'font-family:Consolas,monospace;font-size:11px;line-height:1.8;';
-
-  const sectionStyle = 'border-collapse:collapse;width:100%;margin-top:16px;font-family:Segoe UI,sans-serif;';
-  const titleStyle   = (color) => `background:#1a1d27;color:${color};padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-left:3px solid ${color};border-bottom:1px solid #2e3350;`;
-  const stepStyle    = (crit) => `padding:8px 12px;border-bottom:1px solid #2e3350;background:${crit ? '#ff9f4308' : '#0f1117'};`;
-  const formulaStyle = `${base}background:#1a1d27;padding:5px 10px;border-radius:4px;border-left:2px solid #2e3350;display:block;margin-top:4px;`;
-
-  let html = `<br><table style="${sectionStyle}">`;
-
-  // Paso 1
-  html += `<tr><td style="${titleStyle('#60a5fa')}">→ Paso 1 — Pase hacia adelante (IC y TC)</td></tr>`;
-  sorted.forEach(num => {
-    const n = map[num];
-    const isCrit = n.slack === 0;
-    let formula = '';
-    if (n.predecessors.length === 0) {
-      formula = `${s('#60a5fa','IC')} = ${s('#e2e8f0','0')} (sin predecesores)  →  ${s('#34d399','TC')} = ${s('#60a5fa',n.ES)} + ${s('#e2e8f0',n.duration)} = ${s('#34d399',n.EF)}`;
-    } else {
-      const predVals = n.predecessors.map(p => `TC(${p})=${s('#34d399', map[p] ? map[p].EF : '?')}`).join(', ');
-      const maxFn = n.predecessors.length > 1 ? `máx(${predVals})` : predVals;
-      formula = `${s('#60a5fa','IC')} = ${maxFn} = ${s('#60a5fa',n.ES)}  →  ${s('#34d399','TC')} = ${s('#60a5fa',n.ES)} + ${s('#e2e8f0',n.duration)} = ${s('#34d399',n.EF)}`;
-    }
-    html += `<tr><td style="${stepStyle(isCrit)}">
-      <span style="color:${isCrit ? '#ff9f43' : '#6c63ff'};font-weight:800;font-size:11px">#${n.num}</span>
-      <span style="color:#e2e8f0;font-weight:600;font-size:12px;margin-left:6px">${n.name}</span>
-      <span style="${formulaStyle}">${formula}</span>
-    </td></tr>`;
-  });
-
-  // Paso 2
-  html += `<tr><td style="${titleStyle('#f472b6')}">← Paso 2 — Pase hacia atrás (IT y TT)</td></tr>`;
-  [...sorted].reverse().forEach(num => {
-    const n = map[num];
-    const isCrit = n.slack === 0;
-    const successors = Object.values(map).filter(s => s.predecessors.includes(num));
-    let formula = '';
-    if (successors.length === 0) {
-      formula = `${s('#fb923c','TT')} = ${s('#e2e8f0',projectEnd)} (fin del proyecto)  →  ${s('#f472b6','IT')} = ${s('#fb923c',n.LF)} − ${s('#e2e8f0',n.duration)} = ${s('#f472b6',n.LS)}`;
-    } else {
-      const sucVals = successors.map(sv => `IT(${sv.num})=${s('#f472b6', sv.LS)}`).join(', ');
-      const minFn = successors.length > 1 ? `mín(${sucVals})` : sucVals;
-      formula = `${s('#fb923c','TT')} = ${minFn} = ${s('#fb923c',n.LF)}  →  ${s('#f472b6','IT')} = ${s('#fb923c',n.LF)} − ${s('#e2e8f0',n.duration)} = ${s('#f472b6',n.LS)}`;
-    }
-    html += `<tr><td style="${stepStyle(isCrit)}">
-      <span style="color:${isCrit ? '#ff9f43' : '#6c63ff'};font-weight:800;font-size:11px">#${n.num}</span>
-      <span style="color:#e2e8f0;font-weight:600;font-size:12px;margin-left:6px">${n.name}</span>
-      <span style="${formulaStyle}">${formula}</span>
-    </td></tr>`;
-  });
-
-  // Paso 3
-  html += `<tr><td style="${titleStyle('#22d3a5')}">⊘ Paso 3 — Cálculo de holguras</td></tr>`;
-  sorted.forEach(num => {
-    const n = map[num];
-    const isCrit = n.slack === 0;
-    const slackColor = isCrit ? '#ff9f43' : '#22d3a5';
-    const critLabel  = isCrit ? `  ${s('#ff9f43','★ Ruta crítica')}` : '';
-    const formula = `${s('#22d3a5','Holgura')} = ${s('#fb923c','TT')} − ${s('#34d399','TC')} = ${s('#fb923c',n.LF)} − ${s('#34d399',n.EF)} = ${s(slackColor,n.slack)}${critLabel}`;
-    html += `<tr><td style="${stepStyle(isCrit)}">
-      <span style="color:${isCrit ? '#ff9f43' : '#6c63ff'};font-weight:800;font-size:11px">#${n.num}</span>
-      <span style="color:#e2e8f0;font-weight:600;font-size:12px;margin-left:6px">${n.name}</span>
-      <span style="${formulaStyle}">${formula}</span>
-    </td></tr>`;
-  });
-
-  // Paso 4
-  const critNodes = sorted.filter(num => map[num].slack === 0);
-  const critPath  = critNodes.map(num =>
-    `<span style="background:#ff9f4318;border:1px solid #ff9f4344;color:#ff9f43;font-weight:700;padding:1px 7px;border-radius:4px;font-size:11px">#${num} ${map[num].name}</span>`
-  ).join(' <span style="color:#ff9f43;font-weight:700">→</span> ');
-  html += `<tr><td style="${titleStyle('#ff9f43')}">★ Paso 4 — Ruta crítica (Holgura = 0)</td></tr>`;
-  html += `<tr><td style="padding:10px 12px;background:#0f1117;font-size:12px">
-    ${critPath}
-    <br><span style="color:#7a82a6;font-size:11px;margin-top:6px;display:inline-block">
-      Duración total: <strong style="color:#ff9f43">${projectEnd}</strong>
-    </span>
-  </td></tr>`;
-
-  html += '</table>';
-  return html;
-}
 
 // ═══════════════════════════════════════════════════════════════
 //  DIAGRAMA AON  (Activity on Node)
