@@ -12,6 +12,7 @@ let nodePositions = { AON: {}, AOA: {} };
 let selectedPreds = [];
 let diagramType   = 'AON'; // 'AON' | 'AOA'
 let lastCPM       = null;
+let aoaShowValues = false; // mostrar IC/TC/IT/TT en nodos AOA
 
 // ─── DOM refs ───────────────────────────────────────────────────
 const activityBody    = document.getElementById('activity-body');
@@ -379,12 +380,23 @@ diagramTypeToggle.querySelectorAll('.type-btn').forEach(btn => {
     diagramTypeToggle.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     diagramType = btn.dataset.type;
+    // Mostrar/ocultar toggle de valores AOA
+    const isAOA = diagramType === 'AOA';
+    document.getElementById('aoa-values-wrap').classList.toggle('hidden', !isAOA);
+    document.getElementById('aoa-values-sep').classList.toggle('hidden', !isAOA);
     // NO se borran las posiciones — cada tipo tiene su propio objeto
     if (lastCPM) {
       renderDiagram(lastCPM);
       emptyState.classList.add('hidden');
     }
   });
+});
+
+// ─── Toggle valores AOA ──────────────────────────────────────────
+const toggleAoaValues = document.getElementById('toggle-aoa-values');
+toggleAoaValues.addEventListener('change', () => {
+  aoaShowValues = toggleAoaValues.checked;
+  if (lastCPM && diagramType === 'AOA') renderDiagram(lastCPM);
 });
 
 // ─── Número siguiente disponible ────────────────────────────────
@@ -1224,7 +1236,7 @@ function buildAOAGraph(acts, map) {
   nodes[0] = { label: '0', isCrit: false };
 
   acts.forEach(a => {
-    nodes[a.num] = { label: `${a.num}`, isCrit: map[a.num].slack === 0 };
+    nodes[a.num] = { label: `${a.num}`, isCrit: map[a.num].slack === 0, cpmData: map[a.num] };
   });
 
   acts.forEach(a => {
@@ -1307,7 +1319,7 @@ function renderDiagramAOA({ map, sorted }) {
     drawNodeAOA(nodeGroup, +id, node, arrows);
   });
 
-  fitView(Object.keys(nodes).map(id => `aoa_${id}`), AOA_R*2, AOA_R*2, true);
+  fitView(Object.keys(nodes).map(id => `aoa_${id}`), aoaShowValues ? 84 : AOA_R * 2, aoaShowValues ? 84 : AOA_R * 2, true);
 }
 
 function drawArrowAOA(group, arr, idx) {
@@ -1345,14 +1357,16 @@ function updateArrowAOA(g, arr, idx) {
   const tp = nodePositions.AOA[`aoa_${arr.to}`];
   if (!fp || !tp) return;
 
+  const R = aoaShowValues ? 42 : AOA_R;
+
   const dx = tp.x - fp.x, dy = tp.y - fp.y;
   const dist = Math.sqrt(dx*dx + dy*dy) || 1;
   const ux = dx/dist, uy = dy/dist;
 
-  const x1 = fp.x + ux * AOA_R;
-  const y1 = fp.y + uy * AOA_R;
-  const x2 = tp.x - ux * AOA_R;
-  const y2 = tp.y - uy * AOA_R;
+  const x1 = fp.x + ux * R;
+  const y1 = fp.y + uy * R;
+  const x2 = tp.x - ux * R;
+  const y2 = tp.y - uy * R;
 
   const path = g.querySelector('.edge-line');
   if (arr.dummy) {
@@ -1377,25 +1391,77 @@ function drawNodeAOA(group, id, node, arrows) {
   const key = `aoa_${id}`;
   const pos = nodePositions.AOA[key];
 
+  // Radio fijo: expandido con tamaños de fuente absolutos, normal para solo número
+  const R = aoaShowValues ? 42 : AOA_R;
+
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   g.classList.add('node-group', 'aoa-node-group');
   g.id = `aoa-node-${id}`;
 
+  // ── Círculo principal ──
   const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  circle.setAttribute('cx', AOA_R); circle.setAttribute('cy', AOA_R);
-  circle.setAttribute('r', AOA_R);
+  circle.setAttribute('cx', R); circle.setAttribute('cy', R);
+  circle.setAttribute('r', R);
   circle.classList.add('aoa-circle');
   if (node.isCrit) circle.classList.add('critical');
   g.appendChild(circle);
 
-  const lbl = makeSVGText(node.label, AOA_R, AOA_R, 'aoa-node-label');
-  if (node.isCrit) lbl.style.fill = 'var(--critical)';
-  g.appendChild(lbl);
+  if (aoaShowValues && node.cpmData) {
+    const d = node.cpmData;
+    const stroke = node.isCrit ? 'var(--critical)' : 'var(--border)';
 
-  g.setAttribute('transform', `translate(${pos.x - AOA_R},${pos.y - AOA_R})`);
+    // ── Línea horizontal a la mitad ──
+    const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    hLine.setAttribute('x1', 0);     hLine.setAttribute('y1', R);
+    hLine.setAttribute('x2', R * 2); hLine.setAttribute('y2', R);
+    hLine.setAttribute('stroke', stroke); hLine.setAttribute('stroke-width', '1.2');
+    g.appendChild(hLine);
+
+    // ── Línea vertical solo en la mitad inferior ──
+    const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    vLine.setAttribute('x1', R); vLine.setAttribute('y1', R);
+    vLine.setAttribute('x2', R); vLine.setAttribute('y2', R * 2);
+    vLine.setAttribute('stroke', stroke); vLine.setAttribute('stroke-width', '1.2');
+    g.appendChild(vLine);
+
+    // ── Mitad superior: número del evento (centrado verticalmente en la mitad) ──
+    const numLbl = makeSVGText(`${id}`, R, R * 0.5, 'aoa-node-label');
+    numLbl.setAttribute('font-size', '14');
+    numLbl.setAttribute('dominant-baseline', 'central');
+    if (node.isCrit) numLbl.style.fill = 'var(--critical)';
+    g.appendChild(numLbl);
+
+    // ── Mitad inferior izquierda: etiqueta IC + valor ES ──
+    const lblIC = makeSVGText('IC', R * 0.5, R + 10, 'aoa-val-key');
+    lblIC.setAttribute('font-size', '8');
+    lblIC.setAttribute('dominant-baseline', 'central');
+    g.appendChild(lblIC);
+    const valIC = makeSVGText(`${d.ES}`, R * 0.5, R + 26, 'aoa-val-num aoa-val-es');
+    valIC.setAttribute('font-size', '11');
+    valIC.setAttribute('dominant-baseline', 'central');
+    g.appendChild(valIC);
+
+    // ── Mitad inferior derecha: etiqueta TC + valor EF ──
+    const lblTC = makeSVGText('TC', R * 1.5, R + 10, 'aoa-val-key');
+    lblTC.setAttribute('font-size', '8');
+    lblTC.setAttribute('dominant-baseline', 'central');
+    g.appendChild(lblTC);
+    const valTC = makeSVGText(`${d.EF}`, R * 1.5, R + 26, 'aoa-val-num aoa-val-ef');
+    valTC.setAttribute('font-size', '11');
+    valTC.setAttribute('dominant-baseline', 'central');
+    g.appendChild(valTC);
+
+  } else {
+    // ── Modo simple: solo número ──
+    const lbl = makeSVGText(`${id}`, R, R, 'aoa-node-label');
+    if (node.isCrit) lbl.style.fill = 'var(--critical)';
+    g.appendChild(lbl);
+  }
+
+  g.setAttribute('transform', `translate(${pos.x - R},${pos.y - R})`);
   group.appendChild(g);
 
-  // Drag AOA
+  // ── Drag ──
   let dragging = false, startMouse = {x:0,y:0}, startPos = {x:0,y:0};
   g.addEventListener('mousedown', e => {
     if (isPanning) return;
@@ -1411,8 +1477,7 @@ function drawNodeAOA(group, id, node, arrows) {
       x: startPos.x + (e.clientX - startMouse.x) / scale,
       y: startPos.y + (e.clientY - startMouse.y) / scale
     };
-    g.setAttribute('transform', `translate(${nodePositions.AOA[key].x - AOA_R},${nodePositions.AOA[key].y - AOA_R})`);
-    // Actualizar flechas conectadas
+    g.setAttribute('transform', `translate(${nodePositions.AOA[key].x - R},${nodePositions.AOA[key].y - R})`);
     arrows.forEach((arr, idx) => {
       if (arr.from === id || arr.to === id) {
         const ag = document.getElementById(`aoa-arrow-${idx}`);
@@ -1454,7 +1519,7 @@ function appendLine(parent, x1, y1, x2, y2, stroke) {
 function makeSVGText(content, x, y, cls) {
   const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   t.setAttribute('x', x); t.setAttribute('y', y);
-  t.classList.add(cls);
+  cls.split(' ').forEach(c => { if (c) t.classList.add(c); });
   t.textContent = content;
   return t;
 }

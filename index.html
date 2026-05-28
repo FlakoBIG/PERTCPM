@@ -178,6 +178,15 @@
       <div class="canvas-toolbar">
         <span class="toolbar-hint">Arrastra los nodos para reorganizar el diagrama</span>
         <div class="toolbar-right">
+          <!-- Toggle valores CPM en AOA (solo visible en modo AOA) -->
+          <label class="toggle-switch aoa-values-toggle hidden" id="aoa-values-wrap" title="Mostrar IC / TC en los nodos">
+            <input type="checkbox" id="toggle-aoa-values" />
+            <span class="toggle-track">
+              <span class="toggle-thumb"></span>
+            </span>
+            <span class="toggle-label">Valores</span>
+          </label>
+          <div class="toolbar-sep aoa-values-toggle hidden" id="aoa-values-sep"></div>
           <!-- Selector de tipo de diagrama -->
           <div class="diagram-type-toggle" id="diagram-type-toggle">
             <button class="type-btn active" data-type="AON" title="Actividad en el Nodo">AON</button>
