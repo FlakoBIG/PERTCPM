@@ -94,6 +94,38 @@ header {
 .btn-hamburger:hover { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
 .btn-hamburger.active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
 
+/* ─── Undo / Redo ───────────────────────────────────────────── */
+.undo-redo-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.btn-undoredo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--text-muted);
+  border-color: var(--border);
+  background: transparent;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition), background var(--transition), border-color var(--transition);
+}
+
+.btn-undoredo:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.btn-undoredo:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
 /* Botón cambio de tema */
 .btn-theme-toggle {
   width: 34px;

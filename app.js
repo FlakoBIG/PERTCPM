@@ -12,7 +12,43 @@ let nodePositions = { AON: {}, AOA: {} };
 let selectedPreds = [];
 let diagramType   = 'AON'; // 'AON' | 'AOA'
 let lastCPM       = null;
-let aoaShowValues = false; // mostrar IC/TC/IT/TT en nodos AOA
+let aoaShowValues = false; // mostrar IC/TC en nodos AOA
+
+// ─── Historial undo / redo ───────────────────────────────────────
+let history     = [];   // pila de estados anteriores
+let historyFwd  = [];   // pila de estados para redo
+const HIST_MAX  = 50;
+
+function snapState() {
+  return JSON.stringify({
+    activities,
+    nodePositions: {
+      AON: { ...nodePositions.AON },
+      AOA: { ...nodePositions.AOA }
+    }
+  });
+}
+
+function saveHistory() {
+  history.push(snapState());
+  if (history.length > HIST_MAX) history.shift();
+  historyFwd = [];
+  updateUndoRedo();
+}
+
+function applyState(json) {
+  const s = JSON.parse(json);
+  activities    = s.activities;
+  nodePositions = s.nodePositions;
+  renderTable();
+  if (lastCPM) renderDiagram(lastCPM);
+  updateUndoRedo();
+}
+
+function updateUndoRedo() {
+  document.getElementById('btn-undo').disabled = history.length === 0;
+  document.getElementById('btn-redo').disabled = historyFwd.length === 0;
+}
 
 // ─── DOM refs ───────────────────────────────────────────────────
 const activityBody    = document.getElementById('activity-body');
@@ -50,6 +86,33 @@ applyTheme(); // aplicar al cargar
 btnTheme.addEventListener('click', () => {
   isLight = !isLight;
   applyTheme();
+});
+
+// ─── Undo / Redo ─────────────────────────────────────────────────
+document.getElementById('btn-undo').addEventListener('click', () => {
+  if (history.length === 0) return;
+  historyFwd.push(snapState());
+  applyState(history.pop());
+});
+
+document.getElementById('btn-redo').addEventListener('click', () => {
+  if (historyFwd.length === 0) return;
+  history.push(snapState());
+  applyState(historyFwd.pop());
+});
+
+// Atajos de teclado Ctrl+Z / Ctrl+Y
+document.addEventListener('keydown', e => {
+  const tag = document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return; // no interferir con inputs
+  if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
+    e.preventDefault();
+    document.getElementById('btn-undo').click();
+  }
+  if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
+    e.preventDefault();
+    document.getElementById('btn-redo').click();
+  }
 });
 
 // ─── Colapsar / expandir panel lateral (botón hamburguesa) ──────
@@ -483,8 +546,9 @@ modalSave.addEventListener('click', () => {
   const predecessors = [...selectedPreds];
   if (editingNum !== null) {
     const act = activities.find(a => a.num === editingNum);
-    if (act) { act.name = name; act.duration = duration; act.predecessors = predecessors; }
+    if (act) { saveHistory(); act.name = name; act.duration = duration; act.predecessors = predecessors; }
   } else {
+    saveHistory();
     activities.push({ num: getNextNum(), name, duration, predecessors });
   }
   renderTable();
@@ -516,6 +580,7 @@ function editActivity(num) {
 }
 
 function deleteActivity(num) {
+  saveHistory();
   activities = activities.filter(a => a.num !== num);
   activities.forEach(a => { a.predecessors = a.predecessors.filter(p => p !== num); });
   renderTable();
@@ -562,6 +627,7 @@ clearClose.addEventListener('click',  () => clearOverlay.classList.add('hidden')
 clearCancel.addEventListener('click', () => clearOverlay.classList.add('hidden'));
 
 clearConfirm.addEventListener('click', () => {
+  saveHistory();
   activities    = [];
   nodePositions = { AON: {}, AOA: {} };
   lastCPM       = null;
@@ -623,6 +689,7 @@ importConfirm.addEventListener('click', () => {
     parsed.push({ num, name, duration, predecessors });
   }
 
+  saveHistory();
   activities    = parsed;
   nodePositions = { AON: {}, AOA: {} };
   lastCPM       = null;
@@ -1193,6 +1260,7 @@ function makeDraggableAON(el, num) {
     if (isPanning) return;
     e.stopPropagation();
     dragging = true;
+    saveHistory();
     startMouse = { x: e.clientX, y: e.clientY };
     startPos   = { ...nodePositions.AON[num] };
     el.style.cursor = 'grabbing';
@@ -1467,6 +1535,7 @@ function drawNodeAOA(group, id, node, arrows) {
     if (isPanning) return;
     e.stopPropagation();
     dragging = true;
+    saveHistory();
     startMouse = { x: e.clientX, y: e.clientY };
     startPos   = { ...nodePositions.AOA[key] };
     g.style.cursor = 'grabbing';
