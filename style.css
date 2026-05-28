@@ -1571,6 +1571,13 @@ tbody td {
   opacity: .5;
 }
 
+.edge-dummy.critical {
+  stroke: var(--critical);
+  stroke-width: 2.5;
+  marker-end: url(#arrow-critical);
+  opacity: .85;
+}
+
 /* ─── Responsive ────────────────────────────────────────────── */
 @media (max-width: 768px) {
   main { flex-direction: column; }
