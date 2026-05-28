@@ -17,9 +17,6 @@ let lastCPM       = null;
 const activityBody    = document.getElementById('activity-body');
 const btnAdd          = document.getElementById('btn-add');
 const btnGenerate     = document.getElementById('btn-generate');
-const btnClear        = document.getElementById('btn-clear');
-const btnExport       = document.getElementById('btn-export');
-const btnImport       = document.getElementById('btn-import');
 const cpmResults      = document.getElementById('cpm-results');
 const cpmTableWrap    = document.getElementById('cpm-table-wrapper');
 const cpmProcedure    = document.getElementById('cpm-procedure');
@@ -32,6 +29,27 @@ const canvasContainer = document.getElementById('canvas-container');
 const panel           = document.getElementById('panel');
 const resizeHandle    = document.getElementById('panel-resize-handle');
 const btnCollapsePanel = document.getElementById('btn-collapse-panel');
+
+// ─── Tema claro / oscuro ─────────────────────────────────────────
+const btnTheme       = document.getElementById('btn-theme');
+const themeIconDark  = document.getElementById('theme-icon-dark');
+const themeIconLight = document.getElementById('theme-icon-light');
+let isLight = localStorage.getItem('skpj-theme') === 'light';
+
+function applyTheme() {
+  document.body.classList.toggle('light', isLight);
+  themeIconDark.style.display  = isLight ? 'none'  : '';
+  themeIconLight.style.display = isLight ? ''      : 'none';
+  btnTheme.title = isLight ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro';
+  localStorage.setItem('skpj-theme', isLight ? 'light' : 'dark');
+}
+
+applyTheme(); // aplicar al cargar
+
+btnTheme.addEventListener('click', () => {
+  isLight = !isLight;
+  applyTheme();
+});
 
 // ─── Colapsar / expandir panel lateral (botón hamburguesa) ──────
 let panelCollapsed  = false;
@@ -69,6 +87,183 @@ btnCollapseActivities.addEventListener('click', () => {
     btnCollapseActivities.title = 'Colapsar actividades';
   }
 });
+
+// ─── Menú Archivo ────────────────────────────────────────────────
+const fileMenuBtn      = document.getElementById('btn-file-menu');
+const fileMenuDropdown = document.getElementById('file-menu-dropdown');
+
+function openFileMenu()  { fileMenuBtn.classList.add('open'); fileMenuDropdown.classList.add('open'); }
+function closeFileMenu() { fileMenuBtn.classList.remove('open'); fileMenuDropdown.classList.remove('open'); }
+
+fileMenuBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  fileMenuDropdown.classList.contains('open') ? closeFileMenu() : openFileMenu();
+});
+
+document.addEventListener('click', () => closeFileMenu());
+fileMenuDropdown.addEventListener('click', e => e.stopPropagation());
+
+document.getElementById('fm-new').addEventListener('click', () => {
+  closeFileMenu();
+  clearOverlay.classList.remove('hidden');
+});
+
+document.getElementById('fm-import').addEventListener('click', () => {
+  closeFileMenu();
+  importTextarea.value = '';
+  importError.classList.add('hidden');
+  importOverlay.classList.remove('hidden');
+  importTextarea.focus();
+});
+
+document.getElementById('fm-export').addEventListener('click', () => {
+  closeFileMenu();
+  if (activities.length === 0) return;
+  exportTextarea.value = serializeActivities();
+  exportOverlay.classList.remove('hidden');
+});
+
+document.getElementById('fm-clear').addEventListener('click', () => {
+  closeFileMenu();
+  clearOverlay.classList.remove('hidden');
+});
+
+// ─── Guardar proyecto .skpj ──────────────────────────────────────
+document.getElementById('fm-save').addEventListener('click', () => {
+  closeFileMenu();
+  saveSkpj();
+});
+
+function saveSkpj() {
+  // Construir el objeto completo del proyecto
+  const project = {
+    _format:   'SkinnyProject',
+    _version:  '1.0',
+    _saved:    new Date().toISOString(),
+    // Actividades
+    activities: activities.map(a => ({ ...a })),
+    // Posiciones de nodos en ambos tipos de diagrama
+    nodePositions: {
+      AON: { ...nodePositions.AON },
+      AOA: { ...nodePositions.AOA }
+    },
+    // Tipo de diagrama activo
+    diagramType,
+    // Zoom y pan
+    view: { scale, panX, panY },
+    // Resultados CPM completos (si existen)
+    cpm: lastCPM ? serializeCPM(lastCPM) : null
+  };
+
+  const json = JSON.stringify(project, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+
+  // Nombre del archivo: fecha + hora
+  const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const name = `proyecto-cpm-${ts}.skpj`;
+
+  const a = document.createElement('a');
+  a.href     = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function serializeCPM(cpm) {
+  // Serializa el mapa CPM a un objeto plano (sin referencias circulares)
+  const mapPlain = {};
+  Object.entries(cpm.map).forEach(([k, v]) => {
+    mapPlain[k] = {
+      num:          v.num,
+      name:         v.name,
+      duration:     v.duration,
+      predecessors: [...v.predecessors],
+      ES:           v.ES,
+      EF:           v.EF,
+      LS:           v.LS,
+      LF:           v.LF,
+      slack:        v.slack
+    };
+  });
+  return {
+    map:        mapPlain,
+    sorted:     [...cpm.sorted],
+    projectEnd: cpm.projectEnd
+  };
+}
+
+// ─── Abrir proyecto .skpj ────────────────────────────────────────
+const skpjInput = document.getElementById('skpj-file-input');
+
+document.getElementById('fm-open').addEventListener('click', () => {
+  closeFileMenu();
+  skpjInput.value = '';   // reset para permitir abrir el mismo archivo dos veces
+  skpjInput.click();
+});
+
+skpjInput.addEventListener('change', () => {
+  const file = skpjInput.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      loadSkpj(JSON.parse(e.target.result));
+    } catch (err) {
+      alert('El archivo no es un proyecto .skpj válido.\n\n' + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+function loadSkpj(project) {
+  if (project._format !== 'SkinnyProject') {
+    throw new Error('Formato de archivo no reconocido.');
+  }
+
+  // Restaurar actividades
+  activities = (project.activities || []).map(a => ({ ...a }));
+
+  // Restaurar posiciones
+  nodePositions = {
+    AON: { ...(project.nodePositions?.AON || {}) },
+    AOA: { ...(project.nodePositions?.AOA || {}) }
+  };
+
+  // Restaurar tipo de diagrama
+  if (project.diagramType) {
+    diagramType = project.diagramType;
+    document.querySelectorAll('.type-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.type === diagramType);
+    });
+  }
+
+  // Restaurar zoom/pan
+  if (project.view) {
+    scale = project.view.scale ?? 1;
+    panX  = project.view.panX  ?? 0;
+    panY  = project.view.panY  ?? 0;
+    applyTransform();
+  }
+
+  // Restaurar CPM
+  if (project.cpm) {
+    lastCPM = project.cpm;
+    renderCPMTable(lastCPM);
+    renderCPMProcedure(lastCPM);
+    renderDiagram(lastCPM);
+    emptyState.classList.add('hidden');
+  } else {
+    lastCPM = null;
+    diagramGroup.innerHTML = '';
+    emptyState.classList.remove('hidden');
+    cpmResults.classList.add('hidden');
+  }
+
+  // Renderizar tabla de actividades
+  renderTable();
+}
 
 // Modal actividad
 const modalOverlay  = document.getElementById('modal-overlay');
@@ -316,6 +511,13 @@ function deleteActivity(num) {
 
 // ─── Render tabla ────────────────────────────────────────────────
 function renderTable() {
+  // Habilitar/deshabilitar opciones del menú según si hay actividades
+  const hasActivities = activities.length > 0;
+  const fmExport = document.getElementById('fm-export');
+  const fmSave   = document.getElementById('fm-save');
+  fmExport.disabled = !hasActivities;
+  fmSave.disabled   = !hasActivities;
+
   activityBody.innerHTML = '';
   if (activities.length === 0) {
     activityBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px 8px">Sin actividades registradas</td></tr>`;
@@ -344,10 +546,6 @@ function renderTable() {
 }
 
 // ─── Limpiar todo (con confirmación) ────────────────────────────
-btnClear.addEventListener('click', () => {
-  clearOverlay.classList.remove('hidden');
-});
-
 clearClose.addEventListener('click',  () => clearOverlay.classList.add('hidden'));
 clearCancel.addEventListener('click', () => clearOverlay.classList.add('hidden'));
 
@@ -372,12 +570,6 @@ function serializeActivities() {
   }).join('\n');
 }
 
-btnExport.addEventListener('click', () => {
-  if (activities.length === 0) return;
-  exportTextarea.value = serializeActivities();
-  exportOverlay.classList.remove('hidden');
-});
-
 exportClose.addEventListener('click',  () => exportOverlay.classList.add('hidden'));
 exportClose2.addEventListener('click', () => exportOverlay.classList.add('hidden'));
 
@@ -389,13 +581,6 @@ exportCopy.addEventListener('click', () => {
 });
 
 // ─── Importar ────────────────────────────────────────────────────
-btnImport.addEventListener('click', () => {
-  importTextarea.value = '';
-  importError.classList.add('hidden');
-  importOverlay.classList.remove('hidden');
-  importTextarea.focus();
-});
-
 importClose.addEventListener('click',  () => importOverlay.classList.add('hidden'));
 importCancel.addEventListener('click', () => importOverlay.classList.add('hidden'));
 

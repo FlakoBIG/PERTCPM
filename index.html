@@ -15,11 +15,84 @@
         <span class="logo-icon">◈</span>
         <span class="logo-text">PERT <span class="accent">/ CPM</span></span>
       </div>
+
+      <!-- Menú Archivo -->
+      <div class="file-menu" id="file-menu">
+        <button class="file-menu-btn" id="btn-file-menu">
+          Archivo <span class="file-menu-arrow">▾</span>
+        </button>
+        <div class="file-menu-dropdown" id="file-menu-dropdown">
+          <button class="file-menu-item" id="fm-new">
+            <span class="fm-icon">✦</span>
+            <span class="fm-text">
+              <span class="fm-label">Nuevo diagrama</span>
+              <span class="fm-hint">Limpiar todo y empezar de cero</span>
+            </span>
+          </button>
+          <div class="file-menu-sep"></div>
+          <button class="file-menu-item" id="fm-save">
+            <span class="fm-icon">💾</span>
+            <span class="fm-text">
+              <span class="fm-label">Guardar proyecto</span>
+              <span class="fm-hint">Descargar como archivo .skpj</span>
+            </span>
+          </button>
+          <button class="file-menu-item" id="fm-open">
+            <span class="fm-icon">📂</span>
+            <span class="fm-text">
+              <span class="fm-label">Abrir proyecto</span>
+              <span class="fm-hint">Cargar un archivo .skpj</span>
+            </span>
+          </button>
+          <div class="file-menu-sep"></div>
+          <button class="file-menu-item" id="fm-import">
+            <span class="fm-icon">↓</span>
+            <span class="fm-text">
+              <span class="fm-label">Importar</span>
+              <span class="fm-hint">Cargar actividades desde texto</span>
+            </span>
+          </button>
+          <button class="file-menu-item" id="fm-export">
+            <span class="fm-icon">↑</span>
+            <span class="fm-text">
+              <span class="fm-label">Exportar</span>
+              <span class="fm-hint">Guardar actividades como texto</span>
+            </span>
+          </button>
+          <div class="file-menu-sep"></div>
+          <button class="file-menu-item file-menu-item--danger" id="fm-clear">
+            <span class="fm-icon">🗑</span>
+            <span class="fm-text">
+              <span class="fm-label">Limpiar todo</span>
+              <span class="fm-hint">Eliminar todas las actividades</span>
+            </span>
+          </button>
+        </div>
+      </div>
+
       <p class="tagline">Planificación y análisis de ruta crítica</p>
       <div class="header-brand">
         <span class="brand-by">Desarrollado por</span>
         <span class="brand-name">Skinny<span class="brand-accent">Project</span></span>
       </div>
+      <button id="btn-theme" class="btn btn-icon btn-theme-toggle" title="Cambiar a modo claro">
+        <!-- Ícono luna (modo oscuro activo) -->
+        <svg id="theme-icon-dark" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <!-- Ícono sol (modo claro activo) -->
+        <svg id="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:none">
+          <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+          <line x1="12" y1="1"  x2="12" y2="3"  stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="4.22" y1="4.22"  x2="5.64" y2="5.64"  stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="1"  y1="12" x2="3"  y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
     </div>
   </header>
 
@@ -63,18 +136,8 @@
 
         <div class="panel-actions">
           <button id="btn-generate" class="btn btn-success">Generar Diagrama</button>
-          <button id="btn-clear"    class="btn btn-ghost">Limpiar todo</button>
         </div>
 
-        <!-- Exportar / Importar -->
-        <div class="panel-io">
-          <button id="btn-export" class="btn btn-io" title="Exportar actividades como texto">
-            <span class="io-icon">↑</span> Exportar
-          </button>
-          <button id="btn-import" class="btn btn-io" title="Importar actividades desde texto">
-            <span class="io-icon">↓</span> Importar
-          </button>
-        </div>
       </div>
 
       <!-- Resultados CPM -->
@@ -238,6 +301,9 @@
   </div>
 </body>
 </html>
+
+  <!-- Input oculto para abrir .skpj -->
+  <input type="file" id="skpj-file-input" accept=".skpj" style="display:none" />
 
   <script src="app.js"></script>
 </body>
