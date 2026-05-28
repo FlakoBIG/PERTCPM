@@ -1239,7 +1239,8 @@ function buildAOAGraph(acts, map) {
     // Si tiene múltiples predecesores, agregar flechas dummy desde los demás
     if (a.predecessors.length > 1) {
       a.predecessors.slice(0, -1).forEach(p => {
-        arrows.push({ from: p, to: a.num, label: '', duration: 0, isCrit: false, dummy: true });
+        const dummyIsCrit = map[a.num].slack === 0 && map[p] && map[p].slack === 0;
+        arrows.push({ from: p, to: a.num, label: '', duration: 0, isCrit: dummyIsCrit, dummy: true });
       });
     }
   });
