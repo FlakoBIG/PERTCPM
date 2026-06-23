@@ -3,338 +3,72 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Herramienta PERT / CPM — SkinnyProject</title>
+  <title>PERT / CPM — SkinnyProject</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <header>
-    <div class="header-inner">
-      <button id="btn-collapse-panel" class="btn btn-icon btn-hamburger" title="Plegar / expandir panel">☰</button>
-      <div class="logo">
+  <!-- Fondo animado con partículas / nodos -->
+  <div class="bg-layer" aria-hidden="true">
+    <svg class="bg-svg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <!-- Nodos decorativos -->
+      <circle class="bg-node n1" cx="12%"  cy="18%" r="6"/>
+      <circle class="bg-node n2" cx="28%"  cy="72%" r="4"/>
+      <circle class="bg-node n3" cx="48%"  cy="10%" r="5"/>
+      <circle class="bg-node n4" cx="68%"  cy="80%" r="7"/>
+      <circle class="bg-node n5" cx="82%"  cy="25%" r="4"/>
+      <circle class="bg-node n6" cx="90%"  cy="60%" r="5"/>
+      <circle class="bg-node n7" cx="38%"  cy="88%" r="3"/>
+      <circle class="bg-node n8" cx="72%"  cy="45%" r="4"/>
+      <!-- Flechas / aristas decorativas -->
+      <line class="bg-edge" x1="12%" y1="18%" x2="28%" y2="72%"/>
+      <line class="bg-edge" x1="28%" y1="72%" x2="48%" y2="10%"/>
+      <line class="bg-edge" x1="48%" y1="10%" x2="68%" y2="80%"/>
+      <line class="bg-edge" x1="68%" y1="80%" x2="82%" y2="25%"/>
+      <line class="bg-edge" x1="82%" y1="25%" x2="90%" y2="60%"/>
+      <line class="bg-edge" x1="12%" y1="18%" x2="72%" y2="45%"/>
+      <line class="bg-edge" x1="72%" y1="45%" x2="90%" y2="60%"/>
+      <line class="bg-edge" x1="38%" y1="88%" x2="68%" y2="80%"/>
+    </svg>
+    <!-- Capa de desenfoque -->
+    <div class="bg-blur"></div>
+  </div>
+
+  <!-- Contenido central -->
+  <main class="hero">
+    <div class="card">
+      <div class="logo-wrap">
         <span class="logo-icon">◈</span>
         <span class="logo-text">PERT <span class="accent">/ CPM</span></span>
       </div>
 
-      <!-- Menú Archivo -->
-      <div class="file-menu" id="file-menu">
-        <button class="file-menu-btn" id="btn-file-menu">
-          Archivo <span class="file-menu-arrow">▾</span>
-        </button>
-        <div class="file-menu-dropdown" id="file-menu-dropdown">
-          <button class="file-menu-item" id="fm-new">
-            <span class="fm-icon">✦</span>
-            <span class="fm-text">
-              <span class="fm-label">Nuevo diagrama</span>
-              <span class="fm-hint">Limpiar todo y empezar de cero</span>
-            </span>
-          </button>
-          <div class="file-menu-sep"></div>
-          <button class="file-menu-item" id="fm-save">
-            <span class="fm-icon">💾</span>
-            <span class="fm-text">
-              <span class="fm-label">Guardar proyecto</span>
-              <span class="fm-hint">Descargar como archivo .skpj</span>
-            </span>
-          </button>
-          <button class="file-menu-item" id="fm-open">
-            <span class="fm-icon">📂</span>
-            <span class="fm-text">
-              <span class="fm-label">Abrir proyecto</span>
-              <span class="fm-hint">Cargar un archivo .skpj</span>
-            </span>
-          </button>
-          <div class="file-menu-sep"></div>
-          <button class="file-menu-item" id="fm-import">
-            <span class="fm-icon">↓</span>
-            <span class="fm-text">
-              <span class="fm-label">Importar</span>
-              <span class="fm-hint">Cargar actividades desde texto</span>
-            </span>
-          </button>
-          <button class="file-menu-item" id="fm-export">
-            <span class="fm-icon">↑</span>
-            <span class="fm-text">
-              <span class="fm-label">Exportar</span>
-              <span class="fm-hint">Guardar actividades como texto</span>
-            </span>
-          </button>
-          <div class="file-menu-sep"></div>
-          <button class="file-menu-item file-menu-item--danger" id="fm-clear">
-            <span class="fm-icon">🗑</span>
-            <span class="fm-text">
-              <span class="fm-label">Limpiar todo</span>
-              <span class="fm-hint">Eliminar todas las actividades</span>
-            </span>
-          </button>
-        </div>
-      </div>
+      <p class="subtitle">Herramienta de planificación y ruta crítica</p>
 
-      <!-- Botones Deshacer / Rehacer -->
-      <div class="undo-redo-group">
-        <button id="btn-undo" class="btn btn-icon btn-undoredo" title="Deshacer (Ctrl+Z)" disabled>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 7h10a6 6 0 0 1 0 12H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="3 3 3 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <button id="btn-redo" class="btn btn-icon btn-undoredo" title="Rehacer (Ctrl+Y)" disabled>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 7H11a6 6 0 0 0 0 12h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="21 3 21 7 17 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-      </div>
+      <p class="message">Ahora puedes usar PERT CPM en</p>
 
-      <p class="tagline">Planificación y análisis de ruta crítica</p>
-      <div class="header-brand">
+      <a
+        class="url-link"
+        href="https://skinnyproject.cl/apps/pert"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        skinnyproject.cl/apps/pert
+        <svg class="link-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/>
+          <line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+      </a>
+
+      <div class="brand">
         <span class="brand-by">Desarrollado por</span>
         <span class="brand-name">Skinny<span class="brand-accent">Project</span></span>
       </div>
-      <button id="btn-theme" class="btn btn-icon btn-theme-toggle" title="Cambiar a modo claro">
-        <!-- Ícono luna (modo oscuro activo) -->
-        <svg id="theme-icon-dark" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <!-- Ícono sol (modo claro activo) -->
-        <svg id="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:none">
-          <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
-          <line x1="12" y1="1"  x2="12" y2="3"  stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <line x1="4.22" y1="4.22"  x2="5.64" y2="5.64"  stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <line x1="1"  y1="12" x2="3"  y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
     </div>
-  </header>
-
-  <main>
-    <!-- ── Panel izquierdo ── -->
-    <aside class="panel" id="panel">
-
-      <!-- Manija de redimensionado -->
-      <div class="panel-resize-handle" id="panel-resize-handle" title="Arrastra para redimensionar"></div>
-
-      <div class="panel-header">
-        <h2>Actividades</h2>
-        <div class="panel-header-actions">
-          <button id="btn-add" class="btn btn-primary">+ Agregar</button>
-          <button id="btn-collapse-activities" class="btn btn-icon btn-collapse-acts" title="Colapsar actividades">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="1" y="1" width="12" height="5" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
-              <rect x="1" y="8" width="12" height="5" rx="1.5" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
-              <line x1="4" y1="11.5" x2="10" y2="11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Zona colapsable: tabla + acciones + io -->
-      <div id="activities-section" class="activities-section">
-        <div class="table-wrapper">
-          <table id="activity-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Nombre</th>
-                <th>Dur.</th>
-                <th>Predecesores</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="activity-body"></tbody>
-          </table>
-        </div>
-
-        <div class="panel-actions">
-          <button id="btn-generate" class="btn btn-success">Generar Diagrama</button>
-        </div>
-
-      </div>
-
-      <!-- Resultados CPM -->
-      <div id="cpm-results" class="cpm-results hidden">
-        <div class="cpm-results-header">
-          <h3>Análisis CPM</h3>
-          <div class="cpm-header-actions">
-            <button id="btn-copy-cpm" class="btn btn-io btn-copy-cpm" title="Copiar tabla CPM">
-              <span class="io-icon">⎘</span> Tabla
-            </button>
-          </div>
-        </div>
-        <div id="cpm-table-wrapper"></div>
-        <div class="critical-path-label">
-          <span class="dot critical"></span>
-          Ruta crítica — Duración total: <strong id="total-duration">0</strong>
-        </div>
-        <!-- Barra separadora: toggle + copiar procedimiento -->
-        <div class="proc-toolbar">
-          <label class="toggle-switch" title="Mostrar procedimiento matemático">
-            <input type="checkbox" id="toggle-procedure" />
-            <span class="toggle-track">
-              <span class="toggle-thumb"></span>
-            </span>
-            <span class="toggle-label">Procedimiento</span>
-          </label>
-          <button id="btn-copy-proc" class="btn btn-io btn-copy-cpm" title="Copiar procedimiento completo">
-            <span class="io-icon">⎘</span> Procedimiento
-          </button>
-        </div>
-        <!-- Sección de procedimiento matemático -->
-        <div id="cpm-procedure" class="cpm-procedure hidden"></div>
-      </div>
-    </aside>
-
-    <!-- ── Canvas ── -->
-    <section class="canvas-section">
-      <div class="canvas-toolbar">
-        <span class="toolbar-hint">Arrastra los nodos para reorganizar el diagrama</span>
-        <div class="toolbar-right">
-          <!-- Toggle valores CPM en AOA (solo visible en modo AOA) -->
-          <label class="toggle-switch aoa-values-toggle hidden" id="aoa-values-wrap" title="Mostrar IC / TC en los nodos">
-            <input type="checkbox" id="toggle-aoa-values" />
-            <span class="toggle-track">
-              <span class="toggle-thumb"></span>
-            </span>
-            <span class="toggle-label">Valores</span>
-          </label>
-          <div class="toolbar-sep aoa-values-toggle hidden" id="aoa-values-sep"></div>
-          <!-- Selector de tipo de diagrama -->
-          <div class="diagram-type-toggle" id="diagram-type-toggle">
-            <button class="type-btn active" data-type="AON" title="Actividad en el Nodo">AON</button>
-            <button class="type-btn"        data-type="AOA" title="Actividad en la Flecha">AOA</button>
-          </div>
-          <div class="toolbar-sep"></div>
-          <button id="btn-zoom-in"    class="btn btn-icon" title="Acercar">+</button>
-          <button id="btn-zoom-out"   class="btn btn-icon" title="Alejar">−</button>
-          <button id="btn-zoom-reset" class="btn btn-icon" title="Restablecer zoom">⊙</button>
-        </div>
-      </div>
-      <div class="canvas-container" id="canvas-container">
-        <svg id="diagram-svg" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-              <polygon points="0 0, 10 3.5, 0 7" class="arrow-head" />
-            </marker>
-            <marker id="arrow-critical" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-              <polygon points="0 0, 10 3.5, 0 7" class="arrow-head-critical" />
-            </marker>
-          </defs>
-          <g id="diagram-group"></g>
-        </svg>
-        <div id="empty-state" class="empty-state">
-          <div class="empty-icon">⬡</div>
-          <p>Agrega actividades y presiona<br /><strong>Generar Diagrama</strong></p>
-        </div>
-      </div>
-    </section>
   </main>
 
-  <!-- ── Modal actividad ── -->
-  <div id="modal-overlay" class="modal-overlay hidden">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 id="modal-title">Nueva actividad</h3>
-        <button id="modal-close" class="btn-close">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-num-badge-wrap">
-          <span class="modal-num-label">Número de tarea</span>
-          <span id="modal-num-badge" class="modal-num-badge">—</span>
-        </div>
-        <label>
-          Nombre de la actividad
-          <input type="text" id="input-name" placeholder="Ej: Diseño, Análisis, Pruebas…" maxlength="30" />
-        </label>
-        <label>
-          Duración <span class="hint">(días / semanas / unidades)</span>
-          <input type="number" id="input-duration" placeholder="Ej: 5" min="0" step="0.5" />
-        </label>
-        <label>
-          Predecesores
-          <span class="hint">(selecciona las tareas que preceden a esta)</span>
-        </label>
-        <div id="pred-selected" class="pred-selected-wrap"></div>
-        <div id="pred-options"  class="pred-options-list"></div>
-      </div>
-      <div class="modal-footer">
-        <button id="modal-cancel" class="btn btn-ghost">Cancelar</button>
-        <button id="modal-save"   class="btn btn-primary">Guardar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Modal importar ── -->
-  <div id="import-overlay" class="modal-overlay hidden">
-    <div class="modal modal-wide">
-      <div class="modal-header">
-        <h3>Importar actividades</h3>
-        <button id="import-close" class="btn-close">✕</button>
-      </div>
-      <div class="modal-body">
-        <p class="import-hint">
-          Pega el texto exportado previamente. Cada línea debe tener el formato:<br />
-          <code>#NUM | Nombre | Duración | Predecesores</code>
-        </p>
-        <textarea id="import-textarea" class="import-textarea"
-          placeholder="#1 | Diseño       | 5 | —&#10;#2 | Desarrollo   | 8 | 1&#10;#3 | Pruebas      | 3 | 2"></textarea>
-        <p id="import-error" class="import-error hidden"></p>
-      </div>
-      <div class="modal-footer">
-        <button id="import-cancel" class="btn btn-ghost">Cancelar</button>
-        <button id="import-confirm" class="btn btn-primary">Importar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Modal exportar ── -->
-  <div id="export-overlay" class="modal-overlay hidden">
-    <div class="modal modal-wide">
-      <div class="modal-header">
-        <h3>Exportar actividades</h3>
-        <button id="export-close" class="btn-close">✕</button>
-      </div>
-      <div class="modal-body">
-        <p class="import-hint">Copia este texto para guardar o compartir tus actividades.</p>
-        <textarea id="export-textarea" class="import-textarea" readonly></textarea>
-      </div>
-      <div class="modal-footer">
-        <button id="export-copy" class="btn btn-primary">Copiar al portapapeles</button>
-        <button id="export-close2" class="btn btn-ghost">Cerrar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Modal confirmar limpiar ── -->
-  <div id="clear-overlay" class="modal-overlay hidden">
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <h3>¿Limpiar todo?</h3>
-        <button id="clear-close" class="btn-close">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="confirm-icon">🗑️</div>
-        <p class="confirm-msg">
-          Se eliminarán <strong>todas las actividades</strong> y el diagrama generado.<br />
-          Esta acción no se puede deshacer.
-        </p>
-      </div>
-      <div class="modal-footer">
-        <button id="clear-cancel"  class="btn btn-ghost">Cancelar</button>
-        <button id="clear-confirm" class="btn btn-danger">Sí, limpiar todo</button>
-      </div>
-    </div>
-  </div>
-</body>
-</html>
-
-  <!-- Input oculto para abrir .skpj -->
-  <input type="file" id="skpj-file-input" accept=".skpj" style="display:none" />
-
-  <script src="app.js"></script>
 </body>
 </html>
